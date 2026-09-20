@@ -1,7 +1,7 @@
 {
   "id": "supabase-otp-hook",
   "name": "Supabase Auth OTP",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "type": "extension",
   "main": "dist/index.js",
   "description": "Deliver Supabase Auth phone OTPs over WhatsApp.",
@@ -27,6 +27,7 @@
         "scheme": "standard-webhooks",
         "dedupHeader": "webhook-id"
       },
+      "dedupOn": "body",
       "conversationId": { "jsonPointer": "/user/id" },
       "response": {
         "preflight": [{ "type": "session-alive" }],

@@ -15,8 +15,8 @@
 | Field | Value |
 | ----- | ----- |
 | **Identifier** | `supabase-otp-hook` |
-| **Version** | 0.3.7 |
-| **Released** | 2026-09-18 |
+| **Version** | 0.3.8 |
+| **Released** | 2026-09-20 |
 | **Status** | beta |
 | **Author** | maplerichie |
 | **License** | MIT |
@@ -46,9 +46,11 @@
   `GET /api/plugins/supabase-otp-hook/health` reports the last failure. A send that is only slow
   finishes in the background: the ingress worker dispatch is bounded to 5 s, and an overrun would be
   retried into a duplicate OTP.
-- **Per-user ordering + dedup** — ordered per `user.id`, deduped on `webhook-id`. Dedup catches a
-  replay of one delivery, not a Supabase retry: Auth mints a fresh `webhook-id` per attempt, so a
-  retried hook is a new delivery and sends a second OTP. Ordering and the retry/DLQ path need
+- **Per-user ordering + dedup** — ordered per `user.id`. On a host that supports `dedupOn`, dedup is
+  keyed on the signed body, so an Auth retry of one hook invocation collapses instead of sending a
+  second code, while a new sign-in carries a freshly generated OTP in that body and is not collapsed.
+  On an older host it is keyed on `webhook-id`, which catches a replay of one delivery only, not a
+  retry: Auth mints a fresh `webhook-id` per attempt. Ordering and the retry/DLQ path need
   `QUEUE_ENABLED=true` on the host; with the queue off, ingress runs inline, takes no ordering lock,
   and makes a single attempt.
 
@@ -162,6 +164,9 @@ Session scope (which session sends) is also set at instance mint time, not in th
 
 - **OpenWA** ≥ 0.8.16 — Integration SDK v1 with the `standard-webhooks` ingress signature scheme and
   the `response`/preflight contract (`ctx.registerWebhook`, `webhook:ingress` permission).
+- **Body-keyed ingress dedup** (`dedupOn: "body"`) needs the first OpenWA release after 0.23.5. An
+  older host ignores the key and keys dedup on `webhook-id`, so a Supabase retry of one hook
+  invocation still sends a second code.
 - **Supabase** — HTTP Send SMS hook with Standard Webhooks signing. SQL (Postgres function) hook variant not supported.
 - **WhatsApp** — may rate-limit or require an approved business template for business-initiated messages. Adjust `messageTemplate` to match your approved wording.
 

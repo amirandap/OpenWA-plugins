@@ -7,6 +7,20 @@ to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.8] - 2026-09-20
+
+### Fixed
+
+- **A Supabase retry of one hook invocation no longer sends a second OTP.** Auth mints a fresh
+  `webhook-id` on every attempt of its retry loop while the body inside one invocation stays the same
+  bytes, so dedup keyed on that header read every attempt as a new delivery: a lost ack or a transport
+  error sent the contact a second code. The `send-sms` route now declares `dedupOn: "body"`, which keys
+  the delivery on a hash of the signed body instead, so the attempts of one invocation collapse into a
+  single send. A new sign-in is a separate invocation carrying a freshly generated OTP in that body, so
+  it is not collapsed into an earlier one. This takes effect on the first OpenWA release after 0.23.5.
+  An older host ignores the key and keeps the 0.3.7 behaviour, dedup on `webhook-id`, which catches a
+  replay of one delivery but not a retry.
+
 ## [0.3.7] - 2026-09-18
 
 ### Fixed

@@ -379,6 +379,16 @@ export interface PluginIngressRoute {
   /** Where the provider's conversation id lives, so the host can compute a per-conversation ordering
    *  key. Absent ⇒ per-instance serialization. */
   conversationId?: { header?: string; jsonPointer?: string };
+  /** What identifies a retry of the same delivery. `header` (the default) trusts the dedup header
+   *  whenever the provider sends one and hashes the raw body only when it is absent; `body` keys every
+   *  delivery on that hash whatever the header says, for a provider that mints a fresh delivery id on
+   *  each retry attempt. On a body-keyed route the persisted delivery id and the `{id}` ack token become
+   *  that content hash, and byte-identical bodies collapse within the host's
+   *  INGRESS_DEDUP_RETENTION_DAYS. A provider whose retries legitimately differ in the signed body (a
+   *  fresh timestamp or nonce inside the signed payload) keeps the default, since `body` would dedup
+   *  nothing for it. Any other value is refused at manifest load. IGNORED by hosts up to 0.23.5, which
+   *  key on the header regardless; the floor is the first release after it. */
+  dedupOn?: 'header' | 'body';
   response?: IngressResponseContract;
 }
 
