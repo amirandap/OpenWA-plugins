@@ -190,10 +190,11 @@ Pick a priority from the band that matches what your plugin does:
 
 The official plugins occupy: `gsheets-logger` 10, `chatwoot-adapter` 20, `voice-transcription` 40,
 `group-translate` 50, `http-action` 70, `chat-flow` 75, `faq-bot` 80, `typebot-connector` 85,
-`after-hours` 95.
+`after-hours` 95, `ai-responder` 97.
 
 Responders are ordered from the most specific trigger to the most sweeping: a command prefix, then an
-in-flow state machine, then keyword rules, then a bot that auto-starts every chat, then a time window.
+in-flow state machine, then keyword rules, then a bot that auto-starts every chat, then a time window,
+then a model that answers whatever is left.
 
 ### Claiming
 
@@ -214,7 +215,7 @@ different bot answering something unrelated.
 
 ### Known interactions
 
-Both of these follow from the priority table above; neither is a bug in the plugins involved.
+All of these follow from the priority table above; none is a bug in the plugins involved.
 
 **`faq-bot` (80) partially starves `after-hours` (95).** With `fallbackReply` set, `faq-bot` answers and
 claims any message no rule matched — but only the first one in each `fallbackCooldownSec` window
@@ -231,6 +232,15 @@ case, so while `typebot-connector` is enabled `after-hours` never fires for a di
 intended: a Typebot bot owns every chat it is in scope for, and handing one of its chats to a second
 responder mid-flow is worse than the starvation. Put out-of-hours messaging inside the Typebot flow
 itself — a business-hours condition at the top of the flow — rather than in `after-hours`.
+
+**`ai-responder` (97) is starved by every responder before it, by design.** It answers anything with
+text, so it runs last and sees only what nothing else claimed. `typebot-connector` starves it fully for
+every chat in the connector's scope; enable one or the other per session. `after-hours` and a `faq-bot`
+with `fallbackReply` set starve it partially: each claims the first message per chat in its cooldown
+window and lets the rest through, so a contact gets the away notice or the fallback and then a model
+answer. Leave `fallbackReply` empty when both are enabled, and do not enable `after-hours` on a session
+where the model should answer around the clock. A message over one of its limits is not claimed, so a
+plugin at the default priority 100 may still answer it.
 
 ## Runtime contract (observed)
 

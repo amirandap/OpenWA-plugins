@@ -35,6 +35,7 @@ This repository provides:
 | Plugin | Description | Version | Status |
 | ------ | ----------- | ------- | ------ |
 | [`after-hours`](./after-hours) | Auto-replies with a configurable away/closing message to messages received outside business hours. | 0.2.9 | stable |
+| [`ai-responder`](./ai-responder) | Auto-replies to inbound WhatsApp messages with an OpenAI-compatible Chat Completions API. Single-turn, rate-limited per chat and per session, and last in the responder chain. | 0.1.0 | beta |
 | [`chat-flow`](./chat-flow) | Interactive, stateful auto-reply: a trigger word starts a greeting + numbered menu, replies traverse a configurable menu tree, and per-chat state expires after 15 minutes. | 1.1.11 | stable |
 | [`chatwoot-adapter`](./chatwoot-adapter) | Two-way sync between a WhatsApp session and a Chatwoot inbox: relays WhatsApp messages (1:1 and groups, with media) into Chatwoot as an API-channel inbox, sends agent replies back to WhatsApp, and hands a chat over to a human agent — silencing other OpenWA bots — when an agent takes it in Chatwoot. First consumer of the OpenWA Integration SDK v1; runs sandboxed in the plugin worker. | 0.9.10 | stable |
 | [`faq-bot`](./faq-bot) | Auto-replies to inbound WhatsApp messages from configurable FAQ keyword/regex rules. | 0.2.13 | stable |
@@ -62,6 +63,7 @@ Per-session config** for details and caveats.
 | Plugin | Per-session config | Notes |
 | ------ | :----------------: | ----- |
 | [`after-hours`](./after-hours) | ✅ Supported | All fields per session; takes effect on next message. |
+| [`ai-responder`](./ai-responder) | ✅ Supported | All fields per session (different providers, models and prompts); rate limits are in memory and reset on restart. |
 | [`chat-flow`](./chat-flow) | ✅ Supported | All fields per session; flow state is per `(session, chat)`. |
 | [`chatwoot-adapter`](./chatwoot-adapter) | ⚠️ Supported, with caveat | All fields per session, the first-class multi-tenant shape; the failed-relay retry queue drains only once that session dispatches an event again. |
 | [`faq-bot`](./faq-bot) | ✅ Supported | All fields per session (different rule sets per number). |
