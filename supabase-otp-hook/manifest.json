@@ -1,7 +1,7 @@
 {
   "id": "supabase-otp-hook",
   "name": "Supabase Auth OTP",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "type": "extension",
   "main": "dist/index.js",
   "description": "Deliver Supabase Auth phone OTPs over WhatsApp.",
@@ -79,6 +79,8 @@
     "zh-CN": { "name": "Supabase Auth OTP", "description": "通过 WhatsApp 发送 Supabase Auth 手机 OTP 验证码。",
       "config": { "appName": { "title": "应用名称" }, "messageTemplate": { "title": "消息模板" }, "fallbackSessionId": { "title": "备用 WhatsApp 会话" }, "debug": { "title": "调试模式" } } },
     "zh-HK": { "name": "Supabase Auth OTP", "description": "透過 WhatsApp 發送 Supabase Auth 手機 OTP 驗證碼。",
-      "config": { "appName": { "title": "應用程式名稱" }, "messageTemplate": { "title": "訊息範本" }, "fallbackSessionId": { "title": "備用 WhatsApp 工作階段" }, "debug": { "title": "除錯模式" } } }
+      "config": { "appName": { "title": "應用程式名稱" }, "messageTemplate": { "title": "訊息範本" }, "fallbackSessionId": { "title": "備用 WhatsApp 工作階段" }, "debug": { "title": "除錯模式" } } },
+    "hi": { "name": "Supabase ऑथ OTP", "description": "WhatsApp के माध्यम से Supabase ऑथ फोन OTP डिलीवर करता है।",
+      "config": { "appName": { "title": "ऐप का नाम" }, "messageTemplate": { "title": "संदेश टेम्पलेट" }, "fallbackSessionId": { "title": "फ़ॉलबैक WhatsApp सेशन" }, "debug": { "title": "डीबग (Debug) मोड" } } }
   }
 }

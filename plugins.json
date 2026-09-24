@@ -2,7 +2,7 @@
   {
     "id": "after-hours",
     "name": "After-Hours Auto-Reply",
-    "version": "0.2.8",
+    "version": "0.2.9",
     "type": "extension",
     "status": "stable",
     "description": "Auto-replies with a configurable away/closing message to messages received outside business hours.",
@@ -18,11 +18,11 @@
     ],
     "minOpenWAVersion": "0.7.0",
     "testedOpenWAVersion": "0.23.6",
-    "releasedAt": "2026-09-23",
+    "releasedAt": "2026-09-24",
     "repoPath": "after-hours",
     "repoUrl": "https://github.com/rmyndharis/OpenWA-plugins",
     "homepage": "https://github.com/rmyndharis/OpenWA-plugins/tree/main/after-hours",
-    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/after-hours-v0.2.8/after-hours.zip#sha256=1de2e371e9fcc569b5c7d55de90a5947b96933cd6eabed0c52966c0ff0e744c1",
+    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/after-hours-v0.2.9/after-hours.zip#sha256=1dcb1fff6183ddc852c67c812464157bf1e6ad4ed71838ca8a764eff8efc1b6a",
     "permissions": [
       "messages:send"
     ],
@@ -197,13 +197,34 @@
             "title": "亦在群組中回覆"
           }
         }
+      },
+      "hi": {
+        "name": "कामकाजी समय के बाद ऑटो-रिप्लाई",
+        "description": "कामकाजी समय के बाहर प्राप्त संदेशों का कॉन्फ़िगर किए जा सकने वाले अवे/क्लोज़िंग संदेश के साथ ऑटो-रिप्लाई करता है।",
+        "config": {
+          "schedule": {
+            "title": "साप्ताहिक अनुसूची (JSON)"
+          },
+          "timezone": {
+            "title": "IANA टाइमज़ोन"
+          },
+          "awayMessage": {
+            "title": "कामकाजी समय के बाद का रिप्लाई"
+          },
+          "cooldownSec": {
+            "title": "कूलडाउन (सेकंड प्रति चैट)"
+          },
+          "respondInGroups": {
+            "title": "ग्रुप चैट्स में भी रिप्लाई करें"
+          }
+        }
       }
     }
   },
   {
     "id": "chat-flow",
     "name": "Chat Flow",
-    "version": "1.1.10",
+    "version": "1.1.11",
     "type": "extension",
     "status": "stable",
     "description": "Interactive, stateful auto-reply: a trigger word starts a greeting + numbered menu, replies traverse a configurable menu tree, and per-chat state expires after 15 minutes.",
@@ -224,7 +245,7 @@
     "repoPath": "chat-flow",
     "repoUrl": "https://github.com/rmyndharis/OpenWA-plugins",
     "homepage": "https://github.com/rmyndharis/OpenWA-plugins/tree/main/chat-flow",
-    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/chat-flow-v1.1.10/chat-flow.zip#sha256=91adceb887bce10040d565481793e8d497d4fd9cc870e814eb7d9e31e7165453",
+    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/chat-flow-v1.1.11/chat-flow.zip#sha256=f3650a380ed2215a1df19d4e92755ec4573830a7ae0f1088b0d8131f14f10f87",
     "permissions": [
       "messages:send",
       "storage:use"
@@ -376,13 +397,31 @@
             "title": "選單選項"
           }
         }
+      },
+      "hi": {
+        "name": "चैट फ्लो",
+        "description": "इंटरएक्टिव, स्टेटफुल ऑटो-रिप्लाई: एक ट्रिगर शब्द ग्रीटिंग + क्रमांकित मेनू को शुरू करता है, रिप्लाई एक कॉन्फ़िगर किए जा सकने वाले मेनू ट्री में आगे बढ़ते हैं, और प्रति-चैट स्टेट 15 मिनट के बाद समाप्त हो जाता है।",
+        "config": {
+          "trigger": {
+            "title": "ट्रिगर शब्द"
+          },
+          "greeting": {
+            "title": "ग्रीटिंग + मेनू"
+          },
+          "respondInGroups": {
+            "title": "ग्रुप चैट्स में भी रिप्लाई करें"
+          },
+          "options": {
+            "title": "मेनू विकल्प"
+          }
+        }
       }
     }
   },
   {
     "id": "chatwoot-adapter",
     "name": "Chatwoot Adapter",
-    "version": "0.9.9",
+    "version": "0.9.10",
     "type": "extension",
     "status": "stable",
     "description": "Two-way sync between a WhatsApp session and a Chatwoot inbox: relays WhatsApp messages (1:1 and groups, with media) into Chatwoot as an API-channel inbox, sends agent replies back to WhatsApp, and hands a chat over to a human agent — silencing other OpenWA bots — when an agent takes it in Chatwoot. First consumer of the OpenWA Integration SDK v1; runs sandboxed in the plugin worker.",
@@ -404,7 +443,7 @@
     "repoPath": "chatwoot-adapter",
     "repoUrl": "https://github.com/rmyndharis/OpenWA-plugins",
     "homepage": "https://github.com/rmyndharis/OpenWA-plugins/tree/main/chatwoot-adapter",
-    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/chatwoot-adapter-v0.9.9/chatwoot-adapter.zip#sha256=1b5680806e340d8c7f96f2404e1371140bd9462de753470414fbc43fadb08dd3",
+    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/chatwoot-adapter-v0.9.10/chatwoot-adapter.zip#sha256=2383f5e2a0f387995590baf30ab4f76f780e3ba3d13eb196cf7a6b7e7c7ad806",
     "permissions": [
       "net:fetch",
       "conversation:send",
@@ -689,13 +728,46 @@
             "title": "設定時一次性批量匯入所有對話"
           }
         }
+      },
+      "hi": {
+        "name": "Chatwoot एडॉप्टर",
+        "description": "WhatsApp सेशन और Chatwoot इनबॉक्स के बीच टू-वे (two-way) सिंक: WhatsApp संदेशों (1:1 और ग्रुप, मीडिया सहित) को Chatwoot में API-चैनल इनबॉक्स के रूप में रिले करता है, एजेंट के रिप्लाई WhatsApp पर वापस भेजता है, और जब कोई एजेंट Chatwoot में चैट लेता है तो मानव एजेंट को सौंप देता है — अन्य OpenWA बॉट्स को म्यूट करते हुए। OpenWA इंटीग्रेशन SDK v1 का पहला उपभोक्ता; प्लगइन वर्कर में सैंडबॉक्स्ड चलता है।",
+        "config": {
+          "baseUrl": {
+            "title": "Chatwoot बेस URL"
+          },
+          "apiToken": {
+            "title": "API एक्सेस टोकन"
+          },
+          "accountId": {
+            "title": "अकाउंट ID"
+          },
+          "inboxId": {
+            "title": "API-चैनल इनबॉक्स ID"
+          },
+          "relayGroups": {
+            "title": "ग्रुप चैट्स को रिले करें"
+          },
+          "relayMedia": {
+            "title": "इनबाउंड मीडिया को Chatwoot पर रिले करें"
+          },
+          "relayOwnMessages": {
+            "title": "अपने खुद के भेजे गए संदेशों को रिले करें"
+          },
+          "backfillLimit": {
+            "title": "हिस्ट्री बैकफ़िल (संदेश प्रति चैट)"
+          },
+          "backfillAllOnce": {
+            "title": "सेटअप पर एक बार में सभी चैट्स को बल्क-इंपोर्ट करें"
+          }
+        }
       }
     }
   },
   {
     "id": "faq-bot",
     "name": "FAQ / Auto-Reply Bot",
-    "version": "0.2.12",
+    "version": "0.2.13",
     "type": "extension",
     "status": "stable",
     "description": "Auto-replies to inbound WhatsApp messages from configurable FAQ keyword/regex rules.",
@@ -715,7 +787,7 @@
     "repoPath": "faq-bot",
     "repoUrl": "https://github.com/rmyndharis/OpenWA-plugins",
     "homepage": "https://github.com/rmyndharis/OpenWA-plugins/tree/main/faq-bot",
-    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/faq-bot-v0.2.12/faq-bot.zip#sha256=376a91480aefcdf7f017e937d125ee9685380ab5b913b6f0796322635c739ec6",
+    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/faq-bot-v0.2.13/faq-bot.zip#sha256=1e337ce53ce8a2419caeaf85519704ba388c3e2740197bc8c619f0398da0348a",
     "permissions": [
       "messages:send"
     ],
@@ -866,13 +938,31 @@
             "title": "亦在群組中回覆"
           }
         }
+      },
+      "hi": {
+        "name": "सामान्य प्रश्न (FAQ) / ऑटो-रिप्लाई बॉट",
+        "description": "कॉन्फ़िगर किए जा सकने वाले FAQ कीवर्ड/रेगेक्स (regex) नियमों के आधार पर इनबाउंड WhatsApp संदेशों का ऑटो-रिप्लाई करता है।",
+        "config": {
+          "rules": {
+            "title": "नियम (JSON)"
+          },
+          "fallbackReply": {
+            "title": "फ़ॉलबैक (Fallback) रिप्लाई"
+          },
+          "fallbackCooldownSec": {
+            "title": "फ़ॉलबैक कूलडाउन (सेकंड प्रति चैट)"
+          },
+          "respondInGroups": {
+            "title": "ग्रुप चैट्स में भी रिप्लाई करें"
+          }
+        }
       }
     }
   },
   {
     "id": "group-translate",
     "name": "Group Auto-Translation",
-    "version": "1.3.9",
+    "version": "1.3.10",
     "type": "extension",
     "status": "stable",
     "description": "Auto-translates group messages between participants' languages via a LibreTranslate backend. Configure in-chat with /tr commands. Admin-gated; disabled until enabled.",
@@ -892,7 +982,7 @@
     "repoPath": "group-translate",
     "repoUrl": "https://github.com/rmyndharis/OpenWA-plugins",
     "homepage": "https://github.com/rmyndharis/OpenWA-plugins/tree/main/group-translate",
-    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/group-translate-v1.3.9/group-translate.zip#sha256=84fe63c04ac9e4f120a501eea665fa8f5b7aa98ac687eedc24e8aaecc0885c6a",
+    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/group-translate-v1.3.10/group-translate.zip#sha256=99bb850b49fd152c5e7e807380914e0dab898fbd981629375c257c45a1d30656",
     "permissions": [
       "messages:send",
       "engine:read",
@@ -1150,13 +1240,43 @@
             "title": "喺新群組介紹呢個機械人"
           }
         }
+      },
+      "hi": {
+        "name": "ग्रुप ऑटो-अनुवाद",
+        "description": "LibreTranslate बैकएंड के माध्यम से प्रतिभागियों की भाषाओं के बीच ग्रुप संदेशों का ऑटो-अनुवाद करता है। /tr कमांड के साथ इन-चैट कॉन्फ़िगर करें। एडमिन-गेटेड; सक्षम किए जाने तक अक्षम।",
+        "config": {
+          "libretranslateUrl": {
+            "title": "LibreTranslate URL"
+          },
+          "libretranslateApiKey": {
+            "title": "LibreTranslate API कुंजी"
+          },
+          "timeoutMs": {
+            "title": "अनुवाद टाइमआउट (ms)"
+          },
+          "commandPrefix": {
+            "title": "कमांड प्रीफिक्स"
+          },
+          "minLength": {
+            "title": "अनुवाद करने के लिए संदेश की न्यूनतम लंबाई"
+          },
+          "maxLength": {
+            "title": "अनुवाद करने के लिए संदेश की अधिकतम लंबाई"
+          },
+          "denyReply": {
+            "title": "अस्वीकृत कमांड पर रिप्लाई करें"
+          },
+          "announceInGroups": {
+            "title": "नए ग्रुप्स में इस बॉट की घोषणा करें"
+          }
+        }
       }
     }
   },
   {
     "id": "gsheets-logger",
     "name": "Google Sheets Logger",
-    "version": "0.3.11",
+    "version": "0.3.12",
     "type": "extension",
     "status": "stable",
     "description": "Logs WhatsApp message events to a Google Sheet via a service account.",
@@ -1176,7 +1296,7 @@
     "repoPath": "gsheets-logger",
     "repoUrl": "https://github.com/rmyndharis/OpenWA-plugins",
     "homepage": "https://github.com/rmyndharis/OpenWA-plugins/tree/main/gsheets-logger",
-    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/gsheets-logger-v0.3.11/gsheets-logger.zip#sha256=ef458f7b7be468dc281caa1b7c2bd8dc408eaf170510caf33286b330cfce1ba7",
+    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/gsheets-logger-v0.3.12/gsheets-logger.zip#sha256=fc87675747f424af68ed5ed53f36ffef26ac3a673acee6afafc197e4116bdefa",
     "permissions": [
       "net:fetch",
       "storage:use"
@@ -1357,13 +1477,34 @@
             "title": "緩衝行數達到時排清"
           }
         }
+      },
+      "hi": {
+        "name": "Google Sheets लॉगर",
+        "description": "सर्विस अकाउंट के माध्यम से WhatsApp संदेश इवेंट्स को Google Sheets में लॉग करता है।",
+        "config": {
+          "serviceAccountJson": {
+            "title": "सर्विस अकाउंट JSON"
+          },
+          "spreadsheetId": {
+            "title": "स्प्रेडशीट ID"
+          },
+          "sheetTab": {
+            "title": "शीट टैब नाम"
+          },
+          "flushIntervalSec": {
+            "title": "फ्लश अंतराल (सेकंड)"
+          },
+          "flushBatchSize": {
+            "title": "बफ़र की गई पंक्तियाँ यहाँ तक पहुँचने पर फ्लश करें"
+          }
+        }
       }
     }
   },
   {
     "id": "http-action",
     "name": "HTTP Action Bot",
-    "version": "0.2.10",
+    "version": "0.2.11",
     "type": "extension",
     "status": "stable",
     "description": "Triggers safe REST API requests from WhatsApp commands and renders JSON responses back to chat.",
@@ -1383,7 +1524,7 @@
     "repoPath": "http-action",
     "repoUrl": "https://github.com/rmyndharis/OpenWA-plugins",
     "homepage": "https://github.com/rmyndharis/OpenWA-plugins/tree/main/http-action",
-    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/http-action-v0.2.10/http-action.zip#sha256=3360a9a2901e81082ea5d0a0953bffa2eec1c32fd46745eabf1f4a793133c2f1",
+    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/http-action-v0.2.11/http-action.zip#sha256=6b6cfbfae1bd9ad85031754b493eaf9dce947c47d03312dadbace3cf0033bebe",
     "permissions": [
       "net:fetch",
       "conversation:send",
@@ -1637,13 +1778,43 @@
             "title": "動作（JSON 陣列）"
           }
         }
+      },
+      "hi": {
+        "name": "HTTP एक्शन बॉट",
+        "description": "WhatsApp कमांड्स से सुरक्षित REST API अनुरोधों को ट्रिगर करता है और JSON रिस्पॉन्स को वापस चैट में रेंडर करता है।",
+        "config": {
+          "baseUrl": {
+            "title": "बेस URL"
+          },
+          "authType": {
+            "title": "प्रमाणीकरण प्रकार"
+          },
+          "authToken": {
+            "title": "टोकन / API कुंजी"
+          },
+          "apiKeyHeader": {
+            "title": "API कुंजी हेडर"
+          },
+          "respondInGroups": {
+            "title": "ग्रुप चैट्स में रिप्लाई करें"
+          },
+          "timeoutMs": {
+            "title": "अनुरोध टाइमआउट (ms)"
+          },
+          "cooldownSeconds": {
+            "title": "कूलडाउन (सेकंड)"
+          },
+          "actions": {
+            "title": "एक्शन्स (JSON ऐरे)"
+          }
+        }
       }
     }
   },
   {
     "id": "supabase-otp-hook",
     "name": "Supabase Auth OTP",
-    "version": "0.3.9",
+    "version": "0.3.10",
     "type": "extension",
     "status": "beta",
     "description": "Deliver Supabase Auth phone OTPs over WhatsApp.",
@@ -1661,11 +1832,11 @@
     ],
     "minOpenWAVersion": "0.8.16",
     "testedOpenWAVersion": "0.23.6",
-    "releasedAt": "2026-09-23",
+    "releasedAt": "2026-09-24",
     "repoPath": "supabase-otp-hook",
     "repoUrl": "https://github.com/rmyndharis/OpenWA-plugins",
     "homepage": "https://github.com/rmyndharis/OpenWA-plugins/tree/main/supabase-otp-hook",
-    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/supabase-otp-hook-v0.3.9/supabase-otp-hook.zip#sha256=e4e521703b55b224b764cf0f63899beeee11ee205e6092e0731db3f28a229c05",
+    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/supabase-otp-hook-v0.3.10/supabase-otp-hook.zip#sha256=08dfac75da9edee37fe0712e21176998667964894e1b03d2b876f2f3b198be65",
     "permissions": [
       "webhook:ingress",
       "messages:send"
@@ -1822,13 +1993,31 @@
             "title": "除錯模式"
           }
         }
+      },
+      "hi": {
+        "name": "Supabase ऑथ OTP",
+        "description": "WhatsApp के माध्यम से Supabase ऑथ फोन OTP डिलीवर करता है।",
+        "config": {
+          "appName": {
+            "title": "ऐप का नाम"
+          },
+          "messageTemplate": {
+            "title": "संदेश टेम्पलेट"
+          },
+          "fallbackSessionId": {
+            "title": "फ़ॉलबैक WhatsApp सेशन"
+          },
+          "debug": {
+            "title": "डीबग (Debug) मोड"
+          }
+        }
       }
     }
   },
   {
     "id": "typebot-connector",
     "name": "Typebot Connector",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "type": "extension",
     "status": "stable",
     "description": "Runs a Typebot flow as the brain of a WhatsApp bot: inbound messages drive a Typebot chat session via the live Chat API, and the bot's replies — text, media, and numbered-choice inputs — are sent back to WhatsApp. Auto-starts every chat, handles file-upload steps, and resets when the flow ends or after an idle timeout. Runs sandboxed in the plugin worker; no public URL or webhook required.",
@@ -1850,7 +2039,7 @@
     "repoPath": "typebot-connector",
     "repoUrl": "https://github.com/rmyndharis/OpenWA-plugins",
     "homepage": "https://github.com/rmyndharis/OpenWA-plugins/tree/main/typebot-connector",
-    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/typebot-connector-v0.3.0/typebot-connector.zip#sha256=309be78da4f777e6d628e46ad85aa68add49b36fc443a0aa5e5be41f1bd294fc",
+    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/typebot-connector-v0.3.1/typebot-connector.zip#sha256=e7b1eac75b4339da68040145d0078c25049cfc62b2b8a52d7105fb4af2bca3a7",
     "permissions": [
       "net:fetch",
       "conversation:send",
@@ -2081,13 +2270,40 @@
             "title": "媒體/上傳主機"
           }
         }
+      },
+      "hi": {
+        "name": "Typebot कनेक्टर",
+        "description": "WhatsApp बॉट के मस्तिष्क के रूप में Typebot फ्लो चलाता है: इनबाउंड संदेश लाइव चैट API के माध्यम से Typebot चैट सेशन को चलाते हैं, और बॉट के रिप्लाई — टेक्स्ट, मीडिया और क्रमांकित-विकल्प इनपुट — WhatsApp पर वापस भेजे जाते हैं। हर चैट को स्वतः शुरू करता है, फ़ाइल-अपलोड चरणों को संभालता है, और फ्लो समाप्त होने पर या निष्क्रिय (idle) टाइमआउट के बाद रीसेट होता है। प्लगइन वर्कर में सैंडबॉक्स्ड चलता है; किसी सार्वजनिक URL या वेबहुक की आवश्यकता नहीं है।",
+        "config": {
+          "apiHost": {
+            "title": "Typebot होस्ट URL"
+          },
+          "publicId": {
+            "title": "Typebot पब्लिक ID"
+          },
+          "apiToken": {
+            "title": "API टोकन"
+          },
+          "respondInGroups": {
+            "title": "ग्रुप चैट्स में रिप्लाई करें"
+          },
+          "sessionTimeoutMinutes": {
+            "title": "निष्क्रिय (Idle) रीसेट (मिनट)"
+          },
+          "passContactVariables": {
+            "title": "संपर्क चर (Contact variables) पास करें"
+          },
+          "mediaHost": {
+            "title": "मीडिया/अपलोड होस्ट"
+          }
+        }
       }
     }
   },
   {
     "id": "voice-transcription",
     "name": "Voice Note Transcription",
-    "version": "1.3.0",
+    "version": "1.3.1",
     "type": "extension",
     "status": "beta",
     "description": "Transcribes inbound WhatsApp voice notes to text via an OpenAI-compatible speech-to-text backend (self-hosted Speaches/faster-whisper or hosted Groq/OpenAI) and delivers a `message.transcription` event to your webhook — so bots and AI can read and reply to audio. Off the message-delivery path; disabled until enabled.",
@@ -2109,7 +2325,7 @@
     "repoPath": "voice-transcription",
     "repoUrl": "https://github.com/rmyndharis/OpenWA-plugins",
     "homepage": "https://github.com/rmyndharis/OpenWA-plugins/tree/main/voice-transcription",
-    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/voice-transcription-v1.3.0/voice-transcription.zip#sha256=bbf477477390c13bf6adac82c26bfdc493493c61c954c342d4994e19aff7a1ec",
+    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/voice-transcription-v1.3.1/voice-transcription.zip#sha256=67ee5a1ca5cad01a7e5faea1abc4b953efef2252d781dab85d0b61144a318d00",
     "permissions": [
       "net:fetch",
       "messages:send",
@@ -2487,6 +2703,51 @@
           },
           "chatDelivery": {
             "title": "對話內投遞"
+          }
+        }
+      },
+      "hi": {
+        "name": "वॉयस नोट ट्रांसक्रिप्शन",
+        "description": "OpenAI-संगत स्पीच-टू-टेक्स्ट बैकएंड (सेल्फ-होस्टेड Speaches/faster-whisper या होस्टेड Groq/OpenAI) के माध्यम से इनबाउंड WhatsApp वॉयस नोट्स को टेक्स्ट में ट्रांसक्राइब करता है और आपके वेबहुक पर `message.transcription` इवेंट डिलीवर करता है — ताकि बॉट्स और AI ऑडियो को पढ़ सकें और रिप्लाई कर सकें। संदेश-वितरण (message-delivery) पथ से अलग; सक्षम किए जाने तक अक्षम।",
+        "config": {
+          "sttBaseUrl": {
+            "title": "STT बेस URL"
+          },
+          "sttApiKey": {
+            "title": "STT API कुंजी"
+          },
+          "model": {
+            "title": "मॉडल"
+          },
+          "language": {
+            "title": "भाषा हिंट"
+          },
+          "provider": {
+            "title": "प्रोवाइडर (Provider) लेबल"
+          },
+          "timeoutMs": {
+            "title": "STT टाइमआउट (ms)"
+          },
+          "enabledMessageTypes": {
+            "title": "ट्रांसक्राइब करने के लिए संदेश प्रकार"
+          },
+          "maxSizeBytes": {
+            "title": "अधिकतम ऑडियो आकार (बाइट्स)"
+          },
+          "maxPerHour": {
+            "title": "प्रति घंटा / सेशन अधिकतम ट्रांसक्रिप्शन"
+          },
+          "deliveryWebhookUrl": {
+            "title": "डिलीवरी वेबहुक URL"
+          },
+          "deliverySecret": {
+            "title": "डिलीवरी सीक्रेट"
+          },
+          "deliveryTimeoutMs": {
+            "title": "डिलीवरी टाइमआउट (ms)"
+          },
+          "chatDelivery": {
+            "title": "इन-चैट डिलीवरी"
           }
         }
       }

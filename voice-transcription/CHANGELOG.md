@@ -6,6 +6,12 @@ All notable changes to the Voice Note Transcription plugin are documented here. 
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-09-24
+
+### Added
+
+- Hindi (`hi`) dashboard text: the plugin name, description and config field titles.
+
 ## [1.3.0] - 2026-09-24
 
 ### Added

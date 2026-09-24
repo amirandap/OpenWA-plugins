@@ -1,7 +1,7 @@
 {
   "id": "chatwoot-adapter",
   "name": "Chatwoot Adapter",
-  "version": "0.9.9",
+  "version": "0.9.10",
   "type": "extension",
   "main": "dist/index.js",
   "description": "Two-way sync between a WhatsApp session and a Chatwoot inbox: relays WhatsApp messages (1:1 and groups, with media) into Chatwoot as an API-channel inbox, sends agent replies back to WhatsApp, and hands a chat over to a human agent — silencing other OpenWA bots — when an agent takes it in Chatwoot. First consumer of the OpenWA Integration SDK v1; runs sandboxed in the plugin worker.",
@@ -117,6 +117,8 @@
     "zh-CN": { "name": "Chatwoot 适配器", "description": "在 WhatsApp 会话与 Chatwoot 收件箱之间双向同步：将 WhatsApp 消息（一对一和群组，含媒体）作为 API 渠道收件箱转发到 Chatwoot，把客服回复发回 WhatsApp，并在客服在 Chatwoot 接管会话时将其转交给人工客服——同时让其他 OpenWA 机器人静默。OpenWA Integration SDK v1 的首个使用者；在插件工作器中以沙箱方式运行。",
       "config": { "baseUrl": { "title": "Chatwoot 基础 URL" }, "apiToken": { "title": "API 访问令牌" }, "accountId": { "title": "账户 ID" }, "inboxId": { "title": "API 渠道收件箱 ID" }, "relayGroups": { "title": "转发群聊" }, "relayMedia": { "title": "将接收的媒体转发到 Chatwoot" }, "relayOwnMessages": { "title": "转发你自己发送的消息" }, "backfillLimit": { "title": "历史回填（每个会话的消息数）" }, "backfillAllOnce": { "title": "设置时一次性批量导入所有会话" } } },
     "zh-HK": { "name": "Chatwoot 適配器", "description": "在 WhatsApp 工作階段與 Chatwoot 收件箱之間雙向同步：將 WhatsApp 訊息（一對一及群組，含媒體）以 API 渠道收件箱形式轉發到 Chatwoot，把客服回覆傳回 WhatsApp，並在客服於 Chatwoot 接管對話時轉交給人工客服——同時令其他 OpenWA 機器人靜音。OpenWA Integration SDK v1 的首個使用者；在插件工作器中以沙箱方式運行。",
-      "config": { "baseUrl": { "title": "Chatwoot 基礎 URL" }, "apiToken": { "title": "API 存取權杖" }, "accountId": { "title": "帳戶 ID" }, "inboxId": { "title": "API 渠道收件箱 ID" }, "relayGroups": { "title": "轉發群組對話" }, "relayMedia": { "title": "將接收的媒體轉發到 Chatwoot" }, "relayOwnMessages": { "title": "轉發你自己發送的訊息" }, "backfillLimit": { "title": "歷史回填（每個對話的訊息數）" }, "backfillAllOnce": { "title": "設定時一次性批量匯入所有對話" } } }
+      "config": { "baseUrl": { "title": "Chatwoot 基礎 URL" }, "apiToken": { "title": "API 存取權杖" }, "accountId": { "title": "帳戶 ID" }, "inboxId": { "title": "API 渠道收件箱 ID" }, "relayGroups": { "title": "轉發群組對話" }, "relayMedia": { "title": "將接收的媒體轉發到 Chatwoot" }, "relayOwnMessages": { "title": "轉發你自己發送的訊息" }, "backfillLimit": { "title": "歷史回填（每個對話的訊息數）" }, "backfillAllOnce": { "title": "設定時一次性批量匯入所有對話" } } },
+    "hi": { "name": "Chatwoot एडॉप्टर", "description": "WhatsApp सेशन और Chatwoot इनबॉक्स के बीच टू-वे (two-way) सिंक: WhatsApp संदेशों (1:1 और ग्रुप, मीडिया सहित) को Chatwoot में API-चैनल इनबॉक्स के रूप में रिले करता है, एजेंट के रिप्लाई WhatsApp पर वापस भेजता है, और जब कोई एजेंट Chatwoot में चैट लेता है तो मानव एजेंट को सौंप देता है — अन्य OpenWA बॉट्स को म्यूट करते हुए। OpenWA इंटीग्रेशन SDK v1 का पहला उपभोक्ता; प्लगइन वर्कर में सैंडबॉक्स्ड चलता है।",
+      "config": { "baseUrl": { "title": "Chatwoot बेस URL" }, "apiToken": { "title": "API एक्सेस टोकन" }, "accountId": { "title": "अकाउंट ID" }, "inboxId": { "title": "API-चैनल इनबॉक्स ID" }, "relayGroups": { "title": "ग्रुप चैट्स को रिले करें" }, "relayMedia": { "title": "इनबाउंड मीडिया को Chatwoot पर रिले करें" }, "relayOwnMessages": { "title": "अपने खुद के भेजे गए संदेशों को रिले करें" }, "backfillLimit": { "title": "हिस्ट्री बैकफ़िल (संदेश प्रति चैट)" }, "backfillAllOnce": { "title": "सेटअप पर एक बार में सभी चैट्स को बल्क-इंपोर्ट करें" } } }
   }
 }

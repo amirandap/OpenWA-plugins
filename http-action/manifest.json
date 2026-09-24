@@ -1,7 +1,7 @@
 {
   "id": "http-action",
   "name": "HTTP Action Bot",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "type": "extension",
   "main": "dist/index.js",
   "description": "Triggers safe REST API requests from WhatsApp commands and renders JSON responses back to chat.",
@@ -333,6 +333,36 @@
         },
         "actions": {
           "title": "動作（JSON 陣列）"
+        }
+      }
+    },
+    "hi": {
+      "name": "HTTP एक्शन बॉट",
+      "description": "WhatsApp कमांड्स से सुरक्षित REST API अनुरोधों को ट्रिगर करता है और JSON रिस्पॉन्स को वापस चैट में रेंडर करता है।",
+      "config": {
+        "baseUrl": {
+          "title": "बेस URL"
+        },
+        "authType": {
+          "title": "प्रमाणीकरण प्रकार"
+        },
+        "authToken": {
+          "title": "टोकन / API कुंजी"
+        },
+        "apiKeyHeader": {
+          "title": "API कुंजी हेडर"
+        },
+        "respondInGroups": {
+          "title": "ग्रुप चैट्स में रिप्लाई करें"
+        },
+        "timeoutMs": {
+          "title": "अनुरोध टाइमआउट (ms)"
+        },
+        "cooldownSeconds": {
+          "title": "कूलडाउन (सेकंड)"
+        },
+        "actions": {
+          "title": "एक्शन्स (JSON ऐरे)"
         }
       }
     }

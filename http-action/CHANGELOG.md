@@ -5,6 +5,12 @@ and the top entry's version must match `manifest.json`.
 
 ## [Unreleased]
 
+## [0.2.11] - 2026-09-24
+
+### Added
+
+- Hindi (`hi`) dashboard text: the plugin name, description and config field titles.
+
 ## [0.2.10] - 2026-09-24
 
 ### Fixed

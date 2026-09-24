@@ -1,7 +1,7 @@
 {
   "id": "chat-flow",
   "name": "Chat Flow",
-  "version": "1.1.10",
+  "version": "1.1.11",
   "type": "extension",
   "main": "dist/index.js",
   "description": "Interactive, stateful auto-reply: a trigger word starts a greeting + numbered menu, replies traverse a configurable menu tree, and per-chat state expires after 15 minutes.",
@@ -238,6 +238,24 @@
         },
         "options": {
           "title": "選單選項"
+        }
+      }
+    },
+    "hi": {
+      "name": "चैट फ्लो",
+      "description": "इंटरएक्टिव, स्टेटफुल ऑटो-रिप्लाई: एक ट्रिगर शब्द ग्रीटिंग + क्रमांकित मेनू को शुरू करता है, रिप्लाई एक कॉन्फ़िगर किए जा सकने वाले मेनू ट्री में आगे बढ़ते हैं, और प्रति-चैट स्टेट 15 मिनट के बाद समाप्त हो जाता है।",
+      "config": {
+        "trigger": {
+          "title": "ट्रिगर शब्द"
+        },
+        "greeting": {
+          "title": "ग्रीटिंग + मेनू"
+        },
+        "respondInGroups": {
+          "title": "ग्रुप चैट्स में भी रिप्लाई करें"
+        },
+        "options": {
+          "title": "मेनू विकल्प"
         }
       }
     }

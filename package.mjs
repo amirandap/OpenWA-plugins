@@ -32,7 +32,7 @@ if (manifest.type !== 'extension') fail(`type must be "extension" to be installa
 // (dashboard/src/i18n/index.ts) and duplicated in scripts/catalog.mjs, which warns on the gaps; when
 // the host adds a locale, both copies move together. Four were missing here (de, tr, pt-BR, ko), so a
 // correct manifest translating into them was reported as "not a dashboard-supported code".
-const SUPPORTED_LOCALES = ['en', 'de', 'es', 'he', 'tr', 'zh-CN', 'zh-HK', 'ar', 'te', 'fr', 'it', 'pt-BR', 'ko'];
+const SUPPORTED_LOCALES = ['en', 'de', 'es', 'he', 'tr', 'zh-CN', 'zh-HK', 'ar', 'te', 'fr', 'it', 'pt-BR', 'ko', 'hi'];
 if (manifest.i18n && typeof manifest.i18n === 'object') {
   for (const code of Object.keys(manifest.i18n)) {
     if (!SUPPORTED_LOCALES.includes(code)) console.warn(`⚠ ${plugin}: i18n locale "${code}" is not a dashboard-supported code`);

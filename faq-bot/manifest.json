@@ -1,7 +1,7 @@
 {
   "id": "faq-bot",
   "name": "FAQ / Auto-Reply Bot",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "type": "extension",
   "main": "dist/index.js",
   "description": "Auto-replies to inbound WhatsApp messages from configurable FAQ keyword/regex rules.",
@@ -203,6 +203,24 @@
         },
         "respondInGroups": {
           "title": "亦在群組中回覆"
+        }
+      }
+    },
+    "hi": {
+      "name": "सामान्य प्रश्न (FAQ) / ऑटो-रिप्लाई बॉट",
+      "description": "कॉन्फ़िगर किए जा सकने वाले FAQ कीवर्ड/रेगेक्स (regex) नियमों के आधार पर इनबाउंड WhatsApp संदेशों का ऑटो-रिप्लाई करता है।",
+      "config": {
+        "rules": {
+          "title": "नियम (JSON)"
+        },
+        "fallbackReply": {
+          "title": "फ़ॉलबैक (Fallback) रिप्लाई"
+        },
+        "fallbackCooldownSec": {
+          "title": "फ़ॉलबैक कूलडाउन (सेकंड प्रति चैट)"
+        },
+        "respondInGroups": {
+          "title": "ग्रुप चैट्स में भी रिप्लाई करें"
         }
       }
     }
