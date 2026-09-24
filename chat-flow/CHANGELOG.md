@@ -8,6 +8,18 @@ The version here always matches `manifest.json`'s `version`.
 
 ## [Unreleased]
 
+## [1.1.9] - 2026-09-23
+
+### Fixed
+
+- Catalog orders and product cards no longer start the flow, draw "Invalid option" or spend a miss.
+  From OpenWA 0.23.5 they arrive as `order` and `product`, on Baileys with the order note or product
+  title as the body.
+
+### Changed
+
+- **Verified against OpenWA v0.23.6** (testedOpenWAVersion 0.23.4 -> 0.23.6).
+
 ## [1.1.8] - 2026-09-05
 
 ### Fixed

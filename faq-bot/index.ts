@@ -91,11 +91,14 @@ export default class FaqBot implements IPlugin {
     // could actually handle media. chat-flow guards the same way.
     if (m.fromMe || typeof m.body !== 'string' || !m.body.trim() || !m.chatId || !m.id) return false;
     // Since host 0.23.2 a shared contact card arrives with its full vCard as the body and a poll with
-    // its question, so a non-empty body no longer means a human typed it. A vCard is free text (name,
+    // its question, and since 0.23.5 a Baileys 'order' carries the order note and a 'product' card the
+    // product title, so a non-empty body no longer means a human typed it. A vCard is free text (name,
     // org, notes, numbers) and readily matches a `contains` or `regex` rule; with `fallbackReply` set,
     // an unmatched card would answer and claim the event. 'unknown' stays admitted: business button and
-    // list replies land there and are real answers to a question this bot asked.
-    if (m.type === 'contact' || m.type === 'poll') return false;
+    // list replies land there on whatsapp-web.js (Baileys delivers them as 'text' from 0.23.6, as
+    // 'unknown' before) and are real answers to a question this bot asked. A Baileys whole-catalog share
+    // also arrives as 'unknown' with the catalog title as the body, and cannot be told apart from those.
+    if (m.type === 'contact' || m.type === 'poll' || m.type === 'order' || m.type === 'product') return false;
 
     // Re-parse per event so a per-session config override (resolved by the host for this hook fire) is
     // honored — a snapshot cached at enable would ignore overrides set via the dashboard after enable.

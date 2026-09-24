@@ -5,6 +5,17 @@ and the top entry's version must match `manifest.json`.
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-09-23
+
+### Fixed
+
+- A catalog order or a shared product card no longer triggers an action: from OpenWA 0.23.5 Baileys
+  fills its body with the order note or product title.
+
+### Changed
+
+- **Verified against OpenWA v0.23.6** (testedOpenWAVersion 0.23.4 -> 0.23.6).
+
 ## [0.2.8] - 2026-09-05
 
 ### Fixed

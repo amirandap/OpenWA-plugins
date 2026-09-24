@@ -14,13 +14,13 @@
 | Field | Value |
 | ----- | ----- |
 | **Identifier** | `faq-bot` |
-| **Version** | 0.2.10 |
-| **Released** | 2026-09-06 |
+| **Version** | 0.2.11 |
+| **Released** | 2026-09-23 |
 | **Status** | stable |
 | **Author** | Yudhi Armyndharis |
 | **License** | MIT |
 | **Type** | `extension` |
-| **Requires OpenWA** | ≥ 0.6.1 (tested 0.23.4) |
+| **Requires OpenWA** | ≥ 0.6.1 (tested 0.23.6) |
 | **Keywords** | faq, auto-reply, chatbot, support, whatsapp, openwa |
 | **Repository** | [OpenWA-plugins/faq-bot](https://github.com/rmyndharis/OpenWA-plugins/tree/main/faq-bot) |
 <!-- END DETAILS -->
@@ -91,7 +91,10 @@ on v0.6.0/v0.6.1 a disable + re-enable is needed after changing rules.
 
 Shared contact cards and polls never match a rule and never draw `fallbackReply`: from OpenWA 0.23.2
 both carry text in the message body, and a vCard is free text that matches ordinary `contains` and
-`regex` rules by accident. Tapped business buttons and list replies are still answered.
+`regex` rules by accident. Catalog orders and shared product cards are refused the same way: from
+OpenWA 0.23.5 a Baileys session carries the order note or product title in the body. Tapped business
+buttons and list replies are still answered. A Baileys whole-catalog share arrives as type `unknown`
+with the catalog title as its body, so it can still match a rule or draw the fallback.
 
 ### Per-session config
 

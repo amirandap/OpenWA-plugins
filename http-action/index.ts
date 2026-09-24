@@ -167,12 +167,18 @@ export default class HttpActionPlugin implements IPlugin {
       if (typeof msg.body !== 'string' || !msg.body.trim()) return { continue: true };
       if (!msg.chatId || !msg.id) return { continue: true };
       // Since host 0.23.2 a poll arrives with its question as the body and a contact card with its
-      // vCard, so a non-empty body no longer means someone typed a command. This plugin performs real
-      // writes against the operator's backend, so an accidental trigger is the most expensive one in
-      // the catalog: a poll titled with a configured prefix would fire a GET or POST and claim the
-      // message. 'unknown' stays admitted; a tapped business button is a legitimate way to invoke an
-      // action.
-      if (msg.type === 'contact' || msg.type === 'poll') return { continue: true };
+      // vCard, and from 0.23.5 a Baileys 'order' carries the order note (else its title) and a
+      // 'product' the product card text (else the product title), so a non-empty body no longer means
+      // someone typed a command. This plugin performs real writes against the operator's backend, so
+      // an accidental trigger is the most expensive one in the catalog: a poll titled with a
+      // configured prefix would fire a GET or POST and claim the message. 'unknown' stays admitted:
+      // whatsapp-web.js still delivers a tapped business button or list reply there (Baileys sends
+      // them as 'text' from 0.23.6), and that is a legitimate way to invoke an action. A Baileys
+      // whole-catalog share is 'unknown' too, with the catalog title as the body, and cannot be told
+      // apart from a button reply by type.
+      if (msg.type === 'contact' || msg.type === 'poll' || msg.type === 'order' || msg.type === 'product') {
+        return { continue: true };
+      }
 
       // Re-read config per event so a live dashboard edit is picked up without re-enable.
       let liveCfg: HttpActionConfig;

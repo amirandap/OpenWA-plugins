@@ -14,13 +14,13 @@
 | Field | Value |
 | ----- | ----- |
 | **Identifier** | `chat-flow` |
-| **Version** | 1.1.8 |
-| **Released** | 2026-09-05 |
+| **Version** | 1.1.9 |
+| **Released** | 2026-09-23 |
 | **Status** | stable |
 | **Author** | Yudhi Armyndharis |
 | **License** | MIT |
 | **Type** | `extension` |
-| **Requires OpenWA** | ≥ 0.7.0 (tested 0.23.4) |
+| **Requires OpenWA** | ≥ 0.7.0 (tested 0.23.6) |
 | **Keywords** | menu, flow, interactive, auto-reply, chatbot, whatsapp, openwa |
 | **Repository** | [OpenWA-plugins/chat-flow](https://github.com/rmyndharis/OpenWA-plugins/tree/main/chat-flow) |
 <!-- END DETAILS -->
@@ -113,8 +113,9 @@ Targets OpenWA **≥ 0.7.0** — relies on per-session config resolution (`sessi
 
 Shared contact cards and polls are ignored: from OpenWA 0.23.2 both carry text in the message body
 (a card its vCard, a poll its question), which would otherwise start the flow or draw an "Invalid
-option". Tapped business buttons and list replies still drive the menu, and a captioned image still
-reaches it.
+option". Catalog orders and product cards are ignored the same way: from OpenWA 0.23.5 they arrive as
+`order` and `product`, on Baileys carrying the order note or product title as the body. Tapped business
+buttons and list replies still drive the menu, and a captioned image still reaches it.
 
 ### Per-session config
 
@@ -130,6 +131,10 @@ interfere.
   between a `@lid` privacy id and a phone-based `@c.us` id mid-flow, the in-progress menu state is
   orphaned and the contact restarts from the greeting on the new id. A proper fix needs a host-side
   lid↔phone resolver; tracked upstream.
+- **Whole-catalog shares on Baileys:** from OpenWA 0.23.5 a shared catalog (rather than one product)
+  arrives as type `unknown` with the catalog title as the body, the same type a whatsapp-web.js button
+  reply carries, so it cannot be told apart and still reaches the menu: with an empty `trigger` it
+  starts the flow.
 
 ## Security
 

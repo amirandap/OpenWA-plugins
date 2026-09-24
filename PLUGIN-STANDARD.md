@@ -4,7 +4,8 @@ The conventions every plugin in this repository follows, so the catalog stays co
 management/automation stays easy. Verified against OpenWA's plugin runtime (sandboxed worker model) at
 the same baseline as [`types/openwa.d.ts`](./types/openwa.d.ts) — re-check both together, since this
 document describes host behaviour that has moved repeatedly (per-session config in 0.7, boot re-enable
-in 0.10.5, the storage quota and `message:deleted` in 0.11.0, the `storage:use` gate in 0.17.0).
+in 0.10.5, the storage quota and `message:deleted` in 0.11.0, the `storage:use` gate in 0.17.0, hook
+result checks and sandboxed hook ordering in 0.23.6).
 
 ## Principles
 
@@ -175,6 +176,10 @@ default is `100`. Without an explicit priority, the chain order is registration 
 directory scan at boot, and click order after an operator enables a plugin by hand. That means a
 different plugin can win after a restart than after a manual enable.
 
+From OpenWA 0.23.6 a non-finite priority counts as `100`, and all of one plugin's handlers for an event
+run as a single chain placed at the **lowest** priority any of them asked for. Up to 0.23.5 that chain
+stayed at the first-registered handler's priority, so register the lowest one first.
+
 Pick a priority from the band that matches what your plugin does:
 
 | Band | Range | What belongs here |
@@ -284,9 +289,9 @@ correct plugins and were each learned the hard way. Re-verify against OpenWA cor
    websocket. Use it to claim an event against sibling plugins, never to hide one.
 8. **`webhook:before` is the widest surface a plugin can subscribe to, and nothing gates it.** A
    handler can cancel any of the operator's webhook deliveries and rewrite the outbound body
-   (`{ payload }` replaces it; the host re-asserts only `event`/`sessionId`/`timestamp` and the
-   dedupe ids, and caps the result at 1 MiB). Treat a `webhook:before` subscription in a submitted
-   plugin with the same scrutiny as an ingress route.
+   (`{ payload }` replaces it when it is a plain object, see 12; the host re-asserts only
+   `event`/`sessionId`/`timestamp` and the dedupe ids, and caps the result at 1 MiB). Treat a
+   `webhook:before` subscription in a submitted plugin with the same scrutiny as an ingress route.
 9. **Host bounds, none of them visible from the types:** 30 s per lifecycle phase; 30 s per capability
    call, except the send verbs (`ctx.messages.sendText`, `ctx.messages.reply`, `ctx.conversations.send`)
    at 120 s; 5 s per ingress webhook dispatch and 5 s for `healthCheck`;
@@ -300,15 +305,31 @@ correct plugins and were each learned the hard way. Re-verify against OpenWA cor
 11. **A non-empty `body` does not mean a human typed it.** A poll carries its question, a shared event
    its name, a tapped business button its label, and a shared contact card its vCard. whatsapp-web.js
    has always populated these; Baileys matched it in host 0.23.2, so it is now true on both engines.
+   Since 0.23.5 Baileys also fills it for an `order` (its note, else its title) and a shared `product`
+   card (its text, else the product title), which earlier hosts delivered as `unknown` with no body.
    A plugin that treats `body` as a command, a menu key, or prose to forward **must also gate on
-   `type`**, denying `contact` and `poll`. Two rules on that gate, both easy to get backwards:
-   - **Never deny `type === 'unknown'`.** Business button and list replies land there on both engines.
-     A tapped menu button is the most desirable input a menu bot can receive.
+   `type`**, denying `contact`, `poll`, `order` and `product` (hosts below 0.23.5 never emit the last
+   two, so denying them there is a no-op). Two rules on that gate, both easy to get backwards:
+   - **Never deny `type === 'unknown'`.** Business button and list replies land there on
+     whatsapp-web.js, and on Baileys up to 0.23.5; from 0.23.6 Baileys delivers them as `text` with the
+     tapped label in `body`. A tapped menu button is the most desirable input a menu bot can receive.
+     Known residual: a Baileys whole-catalog share is `unknown` with the catalog title in `body`, and by
+     type it cannot be told apart from a whatsapp-web.js button reply.
    - **Never allowlist `type === 'text'`.** Media captions arrive in `body` under their own media
      type (`image`, `video`, `document`), and reaching a matcher is intended behavior.
 
    `!body.trim()` is still the right guard for what carries no text at all: a sticker, a voice note, an
    image sent without a caption.
+12. **A hook's `data` must keep the event's shape.** From 0.23.6 the host adopts a `message:received`
+   or `message:sent` result only when it is a plain object with string `id` and `chatId`, and a
+   `webhook:before` result only when its `payload` is a plain object. Anything else, `null` included,
+   is skipped and the chain keeps the last usable value. Hosts up to 0.23.5 adopted any value but
+   `undefined`, and a `null` on a message event lost that message from history, webhooks and the
+   websocket. Omit `data` to leave the payload alone; never return `data: null` to mean "consumed".
+13. **A message can arrive long after it was sent.** From 0.23.6 a Baileys session delivers, after a
+   reconnect, what WhatsApp queued while it was disconnected, each message carrying its original
+   `timestamp` (unix seconds). Business hours, cooldowns and staleness checks must read `timestamp`,
+   not the time the hook runs.
 
 **Permissions** — the seven values the host enforces, and what each unlocks. `scripts/catalog.mjs`
 rejects a manifest declaring anything outside this set, so adopting a new one is a deliberate edit
@@ -327,11 +348,17 @@ there rather than a silent publish into `plugins.json`:
 An ingress route with `signature.scheme: "none"` is a hard load failure for the entire plugin unless the
 operator sets `ALLOW_UNSIGNED_INGRESS=true`. `mode: "sync-reply"` is inert dead code — declare
 synchronous behavior via `ingress[].response` instead. A `WebhookResponse` returned from your handler is
-ignored; the provider's reply comes from `ingress[].response.ack` (default 202). A declared ack
-`content-type` never reaches the provider: the host applies your headers and then forces `text/plain`
-on every ingress response, so a provider that requires `application/json` on a 200 or 202 rejects the
-ack. Declare a bodiless status instead (`supabase-otp-hook` acks `204`; express drops the body and the
-content type there anyway). Tracked upstream as OpenWA#1637.
+ignored; the provider's reply comes from `ingress[].response.ack` (default 202), and from 0.23.6 a
+re-delivery gets that same ack rather than `200 duplicate`. From 0.23.6 a declared ack `Content-Type`
+is honored only for `application/json` or `text/plain`; any other type goes out as `text/plain`, and
+0.20.0 through 0.23.5 always send `text/plain`. A plugin that needs a JSON ack must set
+`minOpenWAVersion` to `0.23.6`; otherwise ack with a bodiless `204` (as `supabase-otp-hook` does;
+express drops the body and the content type there anyway).
+
+OpenWA 0.23.6 also refuses at load, taking the whole plugin down, a route that is not one URL path
+segment, a `toleranceSec` that is not a finite number above 0, a `dedupOn` other than `header` or
+`body`, a 1xx ack status, a non-string ack body, and an ack header value Node cannot write. See
+`PluginManifest.ingress` in [`types/openwa.d.ts`](./types/openwa.d.ts) for the full list.
 
 `minOpenWAVersion` is advisory (never enforced by the host). Still bump it when a plugin *requires* a
 newer capability: `canonicalChatId` → 0.8.7, Integration SDK v1 (`sdkVersion: "1"` — a STRING; the

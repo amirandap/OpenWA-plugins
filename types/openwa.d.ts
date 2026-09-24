@@ -1,11 +1,38 @@
 // Vendored OpenWA plugin contract. There is no published @openwa SDK package; keep this in sync
 // with the OpenWA version you target. All imports of this module must be `import type`.
 //
-// Last aligned against OpenWA core v0.23.4 (tag), verified field-by-field against
-// src/core/plugins/plugin.interfaces.ts, src/core/hooks/hook.interfaces.ts, plugin-net.ts,
-// sandbox/{worker-bootstrap,worker-capability,worker-hooks,worker-webhooks}.ts and
-// src/engine/interfaces/whatsapp-engine.interface.ts. Where this file narrows the host on purpose it
-// says so; where the host is stricter than this file, the comment names the runtime consequence.
+// Last aligned against OpenWA core v0.23.6 (tag), verified field-by-field against
+// src/core/plugins/plugin.interfaces.ts, src/core/hooks/{hook.interfaces,hook-results}.ts, plugin-net.ts,
+// sandbox/{protocol,worker-bootstrap,worker-capability,worker-hooks,worker-webhooks}.ts and
+// src/engine/interfaces/whatsapp-engine.interface.ts, with behavior the interfaces do not show read from
+// hook-manager.service.ts, plugin-sandbox-bridge.ts, both engines' message mappers and media paths, and
+// src/modules/integration/ingress{.controller,.service,-ack,-preflight}.ts. Where this file narrows the
+// host on purpose it says so; where the host is stricter than this file, the comment names the runtime
+// consequence.
+// Unlike the ranges below, 0.23.4 → 0.23.6 moves the plugin runtime itself. 0.23.5 changed only message
+// content and one ingress redaction; the rest is 0.23.6. Each item is recorded below where it belongs:
+//   1. Hook results: from 0.23.6 message:received / message:sent adopt only a plain object with string
+//      id and chatId, and webhook:before only a plain-object payload; anything else, null included, is
+//      skipped. See HookResult.data.
+//   2. Hook order: from 0.23.6 a sandboxed plugin's handlers for one event run as one host-side chain at
+//      the lowest priority any of them asked for, and a non-finite priority counts as 100. See
+//      PluginContext.registerHook.
+//   3. Ingress: 0.23.6 refuses more manifests at load, honors a declared ack Content-Type of
+//      application/json or text/plain, answers a re-delivery with the route's ack, adds Retry-After on
+//      the preflight 503, reads `dedupOn` and flattens repeated query values. 0.23.5 redacts a
+//      shared-secret route's credential header. See PluginManifest.ingress, IngressResponseContract,
+//      PluginIngressRoute and WebhookRequest.
+//   4. Messages: 'order' / 'product' types with their `order` / `product` fields (0.23.5, both engines;
+//      Baileys also fills `body`), `button` / `buttons` with Baileys button, template and list replies
+//      typed 'text' (0.23.6, Baileys only), Baileys delivering after reconnect what WhatsApp queued
+//      during a disconnect (0.23.6) and dropping an inbound re-delivery before message:received (0.23.6),
+//      and the Baileys streaming-abort `sizeBytes` (0.23.5). See IncomingMessage.
+//   5. session:created: from 0.23.6 the payload is the session as the REST API returns it, without the
+//      stored proxyUrl or config blob. This file does not type that payload.
+// The sandbox protocol gained an `inFlight` event list that the worker runtime fills itself. What a
+// plugin sees is narrower re-entrancy: from 0.23.6 only a capability call made from inside a hook
+// dispatch is guarded, so a send from an ingress handler or a timer runs every plugin's hooks even while
+// one of this plugin's dispatches is pending.
 // The 0.23.3 → 0.23.4 diff over src/core/plugins/ and src/core/hooks/ is EMPTY, file for file, so the
 // contract itself did not move; the whole delta lives in the engine interface and reaches a plugin as
 // payload CONTENT. Two items, both recorded below where they belong rather than only here:
@@ -43,7 +70,7 @@
 // and cannot import from core. It has been wrong before: the v0.14.0 alignment silently omitted six
 // host fields, four of which predated it by several minor versions, and every one of them was an
 // unannounced gap rather than a deliberate narrowing. When re-aligning, diff MEMBER BY MEMBER against
-// the eight files named above and annotate anything left out, so a future reader can tell an omission
+// the files named above and annotate anything left out, so a future reader can tell an omission
 // from a decision.
 //
 // v0.7 surface: `ctx.net.fetch` (host-proxied, SSRF-guarded outbound HTTP — gated by the
@@ -53,7 +80,7 @@
 // select, array/items, object/properties, min/max/pattern — see PluginConfigField) is plain manifest
 // JSON — the plugin still reads `ctx.config` as `Record<string, unknown>` and validates defensively.
 //
-// Host bounds a plugin cannot see from the types (all host-side, re-checked at v0.23.4):
+// Host bounds a plugin cannot see from the types (all host-side, re-checked at v0.23.6):
 //   30 s per lifecycle phase (onLoad/onEnable/onDisable/onUnload) and per capability call, except
 //   the send verbs (ctx.messages.sendText / ctx.messages.reply / ctx.conversations.send) at 120 s;
 //   5 s per hook dispatch (overrun → the host fails OPEN with {continue:true} and drops your result);
@@ -95,7 +122,16 @@ export interface HookResult<T = unknown> {
    * webhook delivery).
    */
   continue: boolean;
-  data?: T; // modified data, threaded to the next handler and applied by the host
+  /**
+   * Modified data, threaded to the next handler and applied by the host. Omit it to leave the payload
+   * alone. From host 0.23.6 a result is adopted only when the event can use it: on `message:received` /
+   * `message:sent` a plain object with string `id` and `chatId`, on `webhook:before` an object whose
+   * `payload` is a plain object. Anything else, `null` included, is skipped and the chain keeps the last
+   * usable value, between plugins and between one sandboxed plugin's own handlers alike. Hosts up to
+   * 0.23.5 adopted any non-undefined value, `null` included, and a `null` on `message:received` /
+   * `message:sent` lost that message from history, webhooks and the websocket.
+   */
+  data?: T;
   /**
    * In-process (built-in plugin) only — the sandbox wire result carries just `{continue, data}`, so a
    * sandboxed marketplace plugin CANNOT surface a failure this way. Throw instead: the host catches
@@ -270,7 +306,11 @@ export interface PluginManifest {
    *  400; boot: the directory is skipped and the registry entry is forced to ERROR): SDK-major match,
    *  the permission, unique non-empty routes, toleranceSec > 0, no scheme:'none' route unless the
    *  operator opted in (ALLOW_UNSIGNED_INGRESS), response.ack.status an integer in 100..599, and every
-   *  response.ack header name an RFC 7230 token whose value carries no CR/LF. */
+   *  response.ack header name an RFC 7230 token whose value carries no CR/LF. Host 0.23.6 tightens
+   *  these: each route must be ONE URL path segment (no '/', '\', '?', '#', '%' or control character,
+   *  and not '.' or '..'), toleranceSec a finite number > 0 (a numeric string such as "300" still
+   *  loads), dedupOn 'header' or 'body', ack status 200..599 (a 1xx is refused), ack body a string, and
+   *  every ack header value a string Node can write (tab, printable ASCII and 0x80-0xFF only). */
   ingress?: PluginIngressRoute[];
   /** v0.7: per-session activation (default true). The platform owns which sessions a plugin runs for. */
   sessionScoped?: boolean;
@@ -351,23 +391,34 @@ export interface IngressSignatureSpec {
   encoding?: 'hex' | 'base64';
   prefix?: string;
   timestampHeader?: string;
-  /** Replay window for timestampHeader; must be > 0 when present (host default 300 applies when absent). */
+  /** Replay window for timestampHeader; must be a finite number > 0 when present (finite enforced from
+   *  host 0.23.6; host default 300 applies when absent). */
   toleranceSec?: number;
   dedupHeader?: string;
 }
 
 export interface IngressResponseContract {
-  /** Host-side preflight gates run before the delivery is accepted. */
+  /** Host-side preflight gates run before the delivery is accepted. A failed `session-alive` answers 503
+   *  and persists nothing, so the provider's retry counts as a new delivery; from host 0.23.6 that 503
+   *  carries `Retry-After`, which some providers require before they retry at all. */
   preflight?: Array<{ type: 'session-alive' }>;
   /** The synchronous reply the host sends instead of default-202. `body` may template
    *  `{rawBody}`/`{timestamp}`/`{id}`. A WebhookResponse returned from the handler is ignored —
-   *  this ack is the only synchronous reply. */
+   *  this ack is the only synchronous reply.
+   *
+   *  From host 0.23.6 a declared `Content-Type` is honored when its media type is application/json or
+   *  text/plain (sent without parameters); any other type goes out as text/plain, and 0.20.0 through
+   *  0.23.5 always send text/plain. 0.23.6 also drops declared framing and browser-protection headers
+   *  (Content-Length, Transfer-Encoding, Content-Encoding, Trailer, Set-Cookie, Content-Security-Policy,
+   *  Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options, Referrer-Policy,
+   *  Access-Control-Allow-Origin, Access-Control-Allow-Credentials), and answers a re-delivery with this
+   *  same ack, its body rendered from the retry (hosts up to 0.23.5 answered `200 duplicate`). */
   ack?: { status?: number; body?: string; headers?: Record<string, string> };
   deadlineMs?: number; // documented provider ack budget (advisory; not enforced)
 }
 
 export interface PluginIngressRoute {
-  route: string; // host prefixes it; the plugin never binds a port
+  route: string; // ONE URL path segment (refused at load otherwise from 0.23.6); host prefixes it; no port
   /** 'sync-reply' is inert dead code — the pipeline is always async + fast-ack; declare synchronous
    *  behavior via `response` instead. Kept in the union for SDK v1 additive-only compatibility. */
   mode: 'async' | 'sync-reply';
@@ -387,7 +438,9 @@ export interface PluginIngressRoute {
    *  INGRESS_DEDUP_RETENTION_DAYS. A provider whose retries legitimately differ in the signed body (a
    *  fresh timestamp or nonce inside the signed payload) keeps the default, since `body` would dedup
    *  nothing for it. Any other value is refused at manifest load. IGNORED by hosts up to 0.23.5, which
-   *  key on the header regardless; the floor is the first release after it. */
+   *  key on the header regardless; the floor is 0.23.6. From 0.23.6 a dedup header that is present but
+   *  blank counts as absent (body hash); earlier hosts keyed all such deliveries on the empty string and
+   *  dropped every one after the first while still acking it. */
   dedupOn?: 'header' | 'body';
   response?: IngressResponseContract;
 }
@@ -411,6 +464,13 @@ export interface PluginContext {
   logger: PluginLogger;
   /** Per-plugin key/value store (needs the "storage:use" permission — see PluginStorage). */
   storage: PluginStorage;
+  /**
+   * `priority` sorts ascending (default 100). From host 0.23.6 a non-finite or non-numeric value counts
+   * as 100; older hosts sorted on the raw value, so one NaN left the whole event's order undefined. The
+   * host runs all of this plugin's handlers for one event as a single chain (in their own priority
+   * order) placed at the LOWEST priority any of them asked for; up to 0.23.5 that chain stayed at the
+   * first-registered handler's priority, so a later, lower one did not move it ahead of other plugins.
+   */
   registerHook(event: HookEvent, handler: HookHandler, priority?: number): void;
   messages: PluginMessagingCapability;
   engine: PluginEngineReadCapability;
@@ -430,7 +490,14 @@ export interface PluginContext {
 export interface WebhookRequest {
   instanceId: string;
   method: string;
+  /** Provider headers, names lowercased, a repeated header comma-joined. Credentials arrive as
+   *  '[redacted]': authorization, proxy-authorization, cookie, x-hub-signature, x-hub-signature-256,
+   *  x-signature, x-signature-ed25519 and x-webhook-signature since host 0.20.0, and a shared-secret
+   *  route's own declared `signature.header` since 0.23.5. The host verified the request before it was
+   *  stored, so a handler has nothing to re-verify from them. */
   headers: Record<string, string>;
+  /** From host 0.23.6 a repeated key carries its FIRST value (`?a=1&a=2` reads '1'); earlier hosts
+   *  passed Express's array through despite this type. */
   query: Record<string, string>;
   body: string;
   rawBody: string;
@@ -519,16 +586,34 @@ export interface IncomingMessage {
    * NOT empty for every other non-text type: a poll carries its question, a shared event its name, a
    * tapped business button its label, and a shared contact card its vCard (several cards arrive
    * newline-joined). whatsapp-web.js has always populated these; Baileys matched it in host 0.23.2.
+   * On Baileys since 0.23.5 an 'order' carries its note (else its title) and a 'product' card its text
+   * (else the product title); before that both arrived there as 'unknown' with an empty body.
+   * whatsapp-web.js passes its own `msg.body` for both.
    *
    * So `!body.trim()` is NOT a test for "a human typed this". A matcher that treats the body as a
-   * command, a menu key or prose to forward must gate on `type` too, denying 'contact' and 'poll'.
-   * Do NOT deny 'unknown': business button and list replies land there and are real user input.
+   * command, a menu key or prose to forward must gate on `type` too, denying 'contact', 'poll', 'order'
+   * and 'product' (hosts below 0.23.5 never emit the last two, so denying them there is a no-op).
+   * Do NOT deny 'unknown': on whatsapp-web.js business button and list replies land there and are real
+   * user input. On Baileys they did too up to 0.23.5; from 0.23.6 Baileys types button, template and
+   * list replies 'text', with the tapped label in `body` and its id in `button`. Known residual: a
+   * Baileys whole-catalog share stays 'unknown' with the catalog title in `body`, and by type it cannot
+   * be told apart from a whatsapp-web.js button reply, so it still reaches a matcher.
    * Do NOT allowlist 'text': media captions arrive in `body` under their own media type.
    */
   body: string;
   /** Host `MessageType`: text|image|video|audio|voice|document|sticker|location|contact|poll|call|
-   *  revoked|masked|unknown. Kept as `string` here so a new host type never breaks a typecheck. */
+   *  revoked|order|product|masked|unknown ('order' and 'product' from host 0.23.5). Kept as `string`
+   *  here so a new host type never breaks a typecheck. */
   type: string;
+  /**
+   * Unix SECONDS, the original send time. From host 0.23.6 a Baileys session delivers after reconnect
+   * what WhatsApp queued while it was disconnected (inbound messages on `message:received`, and on
+   * `message:sent` what the account typed on its phone meanwhile), each carrying its original
+   * `timestamp`; up to 0.23.5 they were dropped. Time-sensitive logic (business hours, cooldowns,
+   * staleness) must read this, not the processing time. 0.23.6 Baileys also drops a re-delivery of a
+   * message it already stored, before either hook fires (best effort), so a duplicate is rarer but
+   * still possible: keep deduping on `id`.
+   */
   timestamp: number;
   fromMe: boolean;
   isGroup: boolean;
@@ -577,8 +662,10 @@ export interface IncomingMessage {
      *  cause out of five, and the others are worth a retry. */
     omitted?: boolean;
     /** Byte size, but NOT a trustworthy one when `omitted` is true: it is the SENDER-DECLARED size on
-     *  the pre-gate and failed-download exits (`0` when the sender declared nothing), and the CAP
-     *  itself on the streaming abort, which is a bound rather than the real size. */
+     *  the pre-gate, disabled-download, timeout and failed-download exits (`0` when the sender declared
+     *  nothing), and on the Baileys streaming abort the bytes received when the cap tripped, a lower
+     *  bound rather than the real size (host 0.23.5+; up to 0.23.4 Baileys reported the CAP itself on
+     *  both the abort and a timeout). */
     sizeBytes?: number;
   };
   // The message this one replies to (swipe-to-reply / quote), when present. `id` is the quoted WhatsApp
@@ -594,6 +681,19 @@ export interface IncomingMessage {
   /** Set for `call` (call_log) messages: video vs voice, and whether an incoming call went
    *  unanswered. */
   call?: { video: boolean; missed: boolean };
+  /** Set on 'order' (host 0.23.5+, both engines, only when the order id is present). No line items.
+   *  `token` is a single-order CREDENTIAL: pass it through unchanged and never log it. */
+  order?: { orderId: string; token?: string };
+  /** Set on 'product' (host 0.23.5+, both engines, only when the product id is present); the other
+   *  fields are best-effort. */
+  product?: { productId: string; title?: string; description?: string; businessOwnerJid?: string };
+  /** Set when the sender tapped a business button, template quick-reply, list row or native-flow
+   *  control (host 0.23.6+, Baileys only). `id` is the business-defined handle; `text` the visible
+   *  label, also in `body`. */
+  button?: { id: string; text?: string };
+  /** The choices an inbound business prompt offers, URL/call CTAs omitted (host 0.23.6+, Baileys only).
+   *  Set on the prompt itself; a tap sets `button` instead. */
+  buttons?: Array<{ id: string; text: string }>;
   /** Styling of a text status/story: background as `#RRGGBB`. Only set by engines that expose it. */
   backgroundColor?: string;
   /** Styling of a text status/story: the WhatsApp font index. Only set by engines that expose it. */

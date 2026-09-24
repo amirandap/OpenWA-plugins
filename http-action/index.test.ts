@@ -84,6 +84,16 @@ test('a poll or a contact card never triggers an action', async () => {
     'a tapped business button is a legitimate way to invoke an action');
 });
 
+// From host 0.23.5 a Baileys catalog order arrives as 'order' with the order note (else its title) as the
+// body, and a shared product card as 'product' with its text (else the product title). Neither is a typed
+// command, so a note or title starting with a configured prefix must not fire a request or claim it.
+for (const type of ['order', 'product']) {
+  test(`an inbound ${type} never triggers an action`, async () => {
+    assert.equal((await runHook('/stock ABC', type)).continue, true,
+      `a ${type} whose body starts with a configured prefix must not fire a request`);
+  });
+}
+
 test('a channel or broadcast post never triggers an action', async () => {
   // A WhatsApp Channel post arrives with isGroup false, so the only chat-scope gate this plugin had
   // read it as an ordinary 1:1 chat. This plugin performs real writes against the operator's backend,

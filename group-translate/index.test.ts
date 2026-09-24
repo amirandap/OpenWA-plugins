@@ -238,6 +238,63 @@ test("a shared contact card is never translated; a poll question still is", asyn
   assert.equal(replies.length, 1);
 });
 
+// From host 0.23.5 a Baileys order arrives as 'order' with its note or title as the body, and a shared
+// product card as 'product' with its text or title. A commerce message is not conversation: translating
+// it posts a quote-reply into the group and lets detection learn the member's language from a seller's
+// catalog wording.
+for (const [type, body] of [
+  ["order", "Please deliver before noon"],
+  ["product", "Arabica coffee beans 250g"],
+]) {
+  test(`a Baileys '${type}' message is never translated`, async () => {
+    const urls: string[] = [];
+    const replies: string[] = [];
+    const { ctx, getHook } = fakeContext(
+      {},
+      {
+        seed: {
+          [GROUP_KEY]: {
+            sessionId: "s1",
+            chatId: "group@g.us",
+            active: true,
+            participants: {
+              [AUTHOR]: { lang: "en", source: "pinned", enabled: true, samples: 0, updatedAt: "" },
+              "z@s.whatsapp.net": { lang: "id", source: "pinned", enabled: true, samples: 0, updatedAt: "" },
+            },
+            delegatedControllers: [],
+            announced: true,
+          },
+        },
+        net: {
+          fetch: async (url: string) => {
+            urls.push(url);
+            return {
+              ok: true,
+              status: 200,
+              statusText: "",
+              headers: {},
+              body: url.endsWith("/detect")
+                ? '[{"language":"en","confidence":0.99}]'
+                : '{"translatedText":"halo dunia"}',
+            } as PluginNetResponse;
+          },
+        },
+        messages: {
+          sendText: async () => {},
+          reply: async (_s: string, _c: string, _q: string, t: string) => void replies.push(t),
+        },
+      },
+    );
+    const plugin = new TranslationPlugin();
+    await plugin.onEnable(ctx);
+
+    const result = await getHook()!(engineCtx({ body, type }));
+    assert.equal(result.continue, true, "passed on untouched");
+    assert.deepEqual(urls, [], "no translation request is made");
+    assert.deepEqual(replies, [], "and no reply is posted into the group");
+  });
+}
+
 // Regression: the message hook must rebuild the coordinator when a coordinator-affecting config field
 // changes (per-session override), and must NOT rebuild it when the config is unchanged (preserving the
 // LibreTranslate client's circuit-breaker state across messages for the same backend).

@@ -14,13 +14,13 @@
 | Field | Value |
 | ----- | ----- |
 | **Identifier** | `http-action` |
-| **Version** | 0.2.8 |
-| **Released** | 2026-09-05 |
+| **Version** | 0.2.9 |
+| **Released** | 2026-09-23 |
 | **Status** | stable |
 | **Author** | Yudhi Armyndharis |
 | **License** | MIT |
 | **Type** | `extension` |
-| **Requires OpenWA** | ≥ 0.8.0 (tested 0.23.4) |
+| **Requires OpenWA** | ≥ 0.8.0 (tested 0.23.6) |
 | **Keywords** | api, rest, automation, connector, whatsapp, openwa |
 | **Repository** | [OpenWA-plugins/http-action](https://github.com/rmyndharis/OpenWA-plugins/tree/main/http-action) |
 <!-- END DETAILS -->
@@ -110,9 +110,13 @@ Targets OpenWA **≥ 0.8.0**, the release that introduced both capabilities it r
 (`net.allowConfigHosts` and `conversation:send`). Live config edits apply on the next inbound message
 (config is re-read per event).
 
-Shared contact cards and polls never trigger an action: from OpenWA 0.23.2 both carry text in the
-message body, so a poll titled with one of your prefixes would otherwise fire a real request against
-your backend. Tapped business buttons and list replies still trigger actions.
+Shared contact cards, polls, catalog orders and shared product cards never trigger an action: from
+OpenWA 0.23.2 contact cards and polls carry text in the message body, and from 0.23.5 so do Baileys
+orders (the order note or title) and product cards (the card text or product title), so a poll titled
+with one of your prefixes would otherwise fire a real request against your backend. Tapped business
+buttons and list replies still trigger actions. A Baileys whole-catalog share arrives as an `unknown`
+message with the catalog title as its body, like a whatsapp-web.js button reply, so a catalog titled
+with one of your prefixes can still trigger an action.
 
 ### Per-session config
 

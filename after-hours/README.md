@@ -13,13 +13,13 @@
 | Field | Value |
 | ----- | ----- |
 | **Identifier** | `after-hours` |
-| **Version** | 0.2.7 |
-| **Released** | 2026-09-05 |
+| **Version** | 0.2.8 |
+| **Released** | 2026-09-23 |
 | **Status** | stable |
 | **Author** | Yudhi Armyndharis |
 | **License** | MIT |
 | **Type** | `extension` |
-| **Requires OpenWA** | ≥ 0.7.0 (tested 0.23.4) |
+| **Requires OpenWA** | ≥ 0.7.0 (tested 0.23.6) |
 | **Keywords** | after-hours, business-hours, away, auto-reply, whatsapp, openwa |
 | **Repository** | [OpenWA-plugins/after-hours](https://github.com/rmyndharis/OpenWA-plugins/tree/main/after-hours) |
 <!-- END DETAILS -->
@@ -95,6 +95,12 @@ Targets OpenWA **≥ 0.7.0**, which is what the manifest declares and what the c
 runtime features it relies on — sandboxed `Intl` timezone data and `onConfigChange` forwarding, so
 schedule edits apply live without a re-enable — arrived in 0.6.2, but the supported floor is the
 declared one.
+
+The away reply goes out only when the schedule is closed both at the message's own send time and at the
+moment it is processed. This matters from OpenWA 0.23.6, where a Baileys session delivers the messages
+WhatsApp queued during a disconnect once it reconnects: one written during opening hours is not
+answered just because the session came back after closing, and one written overnight but delivered
+after opening is not told the shop is closed.
 
 ### Per-session config
 

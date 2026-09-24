@@ -8,6 +8,18 @@ The version here always matches `manifest.json`'s `version`.
 
 ## [Unreleased]
 
+## [0.2.8] - 2026-09-23
+
+### Fixed
+
+- **A message is answered only when the shop was closed both when it was sent and now.** From OpenWA
+  0.23.6 with Baileys, messages queued during a disconnect arrive after reconnect, so one written during
+  opening hours drew the away reply if the session came back after closing time.
+
+### Changed
+
+- **Verified against OpenWA v0.23.6** (testedOpenWAVersion 0.23.4 -> 0.23.6).
+
 ## [0.2.7] - 2026-09-05
 
 ### Fixed

@@ -8,10 +8,13 @@ import { handleSendSms, readConfig } from './handler.ts';
  * Standard Webhooks signature (manifest signature.scheme: 'standard-webhooks', secret = instance.secret)
  * and runs the `session-alive` preflight before dispatching this handler, so Supabase gets synchronous
  * feedback: 401 on a bad signature, 503 on a dead session, and 204 on accept. The ack carries no body
- * and no content type, the only shape Supabase Auth accepts here. It refuses a 200 or a 202 whose
- * content type does not parse to application/json, and hosts from 0.20.0 on force text/plain on every
- * ingress response (`res.type('text/plain')` after `res.set`, ingress.controller.ts) so a declared
- * application/json never reaches the wire. A 204 returns before Supabase inspects the response at all.
+ * and no content type, the one shape Supabase Auth accepts from every supported host. It refuses a 200
+ * or a 202 whose content type does not parse to application/json. Hosts 0.20.0 through 0.23.5 force
+ * text/plain on every ingress response (`res.type('text/plain')` after `res.set`, ingress.controller.ts)
+ * so a declared application/json never reaches the wire there; 0.23.6 honors a declared
+ * application/json or text/plain (ackContentType, ingress-ack.ts) and still sends any other type as
+ * text/plain. The floor is 0.8.16, so the ack stays a 204, which carries no content type on any host
+ * and returns before Supabase inspects the response at all.
  * Needs Supabase Auth v2.172.0+, the first release that accepts a bodiless 204 from an HTTP hook.
  *
  * This handler runs async from the ingress worker (retry + DLQ) and only parses the payload + fires the

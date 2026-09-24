@@ -14,13 +14,13 @@
 | Field | Value |
 | ----- | ----- |
 | **Identifier** | `gsheets-logger` |
-| **Version** | 0.3.9 |
-| **Released** | 2026-09-05 |
+| **Version** | 0.3.10 |
+| **Released** | 2026-09-23 |
 | **Status** | stable |
 | **Author** | Yudhi Armyndharis |
 | **License** | MIT |
 | **Type** | `extension` |
-| **Requires OpenWA** | ≥ 0.7.0 (tested 0.23.4) |
+| **Requires OpenWA** | ≥ 0.7.0 (tested 0.23.6) |
 | **Keywords** | google-sheets, logging, audit, crm, whatsapp, openwa |
 | **Repository** | [OpenWA-plugins/gsheets-logger](https://github.com/rmyndharis/OpenWA-plugins/tree/main/gsheets-logger) |
 <!-- END DETAILS -->
@@ -206,19 +206,34 @@ The target tab must exist, **with a header row of your choosing** — the plugin
 
 External plugins run **sandboxed in a worker thread** (since OpenWA **v0.6.0**). Requires OpenWA
 **≥ 0.7.0** — all outbound HTTP (OAuth token + Sheets append) goes through the host-proxied,
-SSRF-guarded `ctx.net.fetch` introduced in v0.7, allowlisted to the two fixed Google hosts. Two further
+SSRF-guarded `ctx.net.fetch` introduced in v0.7, allowlisted to the two fixed Google hosts. Further
 capabilities are version-dependent:
 
 - **Richer `body` values from OpenWA ≥ 0.23.2 on the Baileys engine.** Poll questions, shared contact
   vCards, event names and tapped button labels now fill the `body` column where they previously logged
   an empty string, matching what the whatsapp-web.js engine has always logged. A poll logs `type` as
-  `poll` and a contact card as `contact`; shared events and button replies log as `unknown`.
+  `poll` and a contact card as `contact`; shared events log as `unknown`.
+- **Business replies log as `text` from OpenWA ≥ 0.23.6 on the Baileys engine.** A button, template or
+  list reply logs `type` `text` with the tapped label (for a list, the row title) in `body`. Older hosts
+  log all three as `unknown` (a list reply with an empty `body`).
+- **Orders and product cards log as `order` and `product` from OpenWA ≥ 0.23.5** on both engines, where
+  they logged as `unknown` before. On Baileys, `body` now carries the order note (else its title) or the
+  product card text (else the product title) instead of an empty string. A share of the whole catalog
+  still logs as `unknown`, with the catalog title in `body` on Baileys.
 - **`message:ack` rows** require OpenWA **≥ v0.6.1** (#427). On v0.6.0 the hook was declared but never
   fired, so ack rows are absent.
 - **Live config updates** (a `PUT …/config` reaching the running plugin) and **graceful-shutdown buffer
   flush** arrived with the sandbox lifecycle follow-ups (#430) in OpenWA **v0.6.2**, below this plugin's
   declared floor, so every supported host has them. A non-graceful exit (SIGKILL, OOM) still bypasses
   `onDisable`, so rows buffered since the last flush (at most `flushIntervalSec` worth) are lost.
+
+### Chats under human handover
+
+From OpenWA 0.8.0, while another plugin (for example chatwoot-adapter) holds a `human` or `closed`
+handover on a chat, that chat's `message:received` is not dispatched to any other plugin, so its inbound
+messages are **not logged**; this plugin cannot opt out. The chat's `message:sent`, `message:ack` and
+`message:failed` rows are still logged. From OpenWA 0.23.6 the handover also covers the same contact's
+other `@lid` and phone ids.
 
 ### Per-session config
 

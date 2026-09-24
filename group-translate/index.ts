@@ -205,9 +205,13 @@ export class TranslationPlugin implements IPlugin {
     // Since host 0.23.2 a shared contact card arrives with its full vCard as the body. Translating one
     // POSTs a stranger's name and number to the translation backend, posts the machine-translated card
     // back into the group, and feeds the vCard to language detection, which pins the sender's learned
-    // language on their first card. A poll is deliberately NOT denied here: its question is human-typed
+    // language on their first card. Since host 0.23.5 an order ('order') and a shared product card
+    // ('product') are typed on both engines, and on Baileys carry a body too: the order note, else the
+    // order or product title from the seller's catalog. A commerce message is not conversation, and
+    // translating it posts a quote-reply into the group and lets detection learn the member's language
+    // from the seller's wording. A poll is deliberately NOT denied here: its question is human-typed
     // prose and squarely inside what this plugin exists to translate.
-    if (msg.type === "contact") {
+    if (msg.type === "contact" || msg.type === "order" || msg.type === "product") {
       return { continue: true };
     }
     // Re-check the config signature against the firing session's resolved config — if a per-session

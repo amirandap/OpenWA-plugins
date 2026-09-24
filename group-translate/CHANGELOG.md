@@ -8,6 +8,18 @@ The version here always matches `manifest.json`'s `version`.
 
 ## [Unreleased]
 
+## [1.3.8] - 2026-09-23
+
+### Fixed
+
+- Catalog orders and shared product cards are no longer translated. From OpenWA 0.23.5 they arrive as
+  `order` and `product`, on Baileys with the order note or product title as the body, which was posted
+  back into the group as a quote-reply and fed to language detection.
+
+### Changed
+
+- **Verified against OpenWA v0.23.6** (testedOpenWAVersion 0.23.4 -> 0.23.6).
+
 ## [1.3.7] - 2026-09-05
 
 ### Fixed

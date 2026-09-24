@@ -7,6 +7,16 @@ to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.9] - 2026-09-23
+
+### Changed
+
+- **Verified against OpenWA v0.23.6** (testedOpenWAVersion 0.23.4 -> 0.23.6).
+- Docs: the ack note now covers OpenWA 0.23.6, which honors a declared `application/json`; 0.20.0
+  through 0.23.5 force `text/plain`, so the ack stays a bodiless `204`.
+- Docs: body-keyed dedup takes effect from OpenWA 0.23.6.
+- Docs: from OpenWA 0.23.6 the dead-session `503` carries `Retry-After: 5`, so Supabase Auth retries it.
+
 ## [0.3.8] - 2026-09-20
 
 ### Fixed

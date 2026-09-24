@@ -74,6 +74,28 @@ test('a poll question never draws the fallback reply', async () => {
   assert.deepEqual(replies, [], 'the fallback must not answer a poll');
 });
 
+// From host 0.23.5 a Baileys catalog order carries its note (else its title) in `body`, and a shared
+// product card its text or product title: again not something the user typed at this bot.
+test('a catalog order never matches a rule and never claims the message', async () => {
+  const replies: string[] = [];
+  const rules = [{ mode: 'contains', pattern: 'kirim', reply: 'Kirim ke mana?' }];
+  const matchedAsText = await runHook({ rules }, 'Tolong kirim besok pagi', t => replies.push(t));
+  assert.equal(matchedAsText.continue, false, 'guard rail: as plain text this note DOES match the rule');
+
+  replies.length = 0;
+  const asOrder = await runHook({ rules }, 'Tolong kirim besok pagi', t => replies.push(t), 'order');
+  assert.equal(asOrder.continue, true, 'an order must pass down the chain');
+  assert.deepEqual(replies, [], 'and must draw no reply');
+});
+
+test('a shared product card never draws the fallback reply', async () => {
+  const replies: string[] = [];
+  const cfg = { rules: [{ mode: 'contains', pattern: 'xyzzy', reply: 'hit' }], fallbackReply: 'I did not understand' };
+  const asProduct = await runHook(cfg, 'Kaos Polos Hitam XL', t => replies.push(t), 'product');
+  assert.equal(asProduct.continue, true, 'a product card must pass down the chain');
+  assert.deepEqual(replies, [], 'the fallback must not answer a product card');
+});
+
 test('a business button reply is still answered: type unknown stays admitted', async () => {
   const replies: string[] = [];
   const rules = [{ mode: 'exact', pattern: 'Order status', reply: 'Order 123 is on the way' }];

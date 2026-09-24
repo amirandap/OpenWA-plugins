@@ -124,7 +124,16 @@ export default class AfterHours implements IPlugin {
     // logging a send failure per post. Broadcast-list ids are the same shape. Matched on the JID rather
     // than `msg.kind`, which the host only stamps from 0.10.8, below every floor in this catalogue.
     if (isBroadcastJid(m.chatId)) return false;
-    if (!isAfterHours(new Date(), cfg.schedule, cfg.config.timezone)) return false;
+    // Closed at BOTH the message's own send time and now. From OpenWA 0.23.6 a Baileys session delivers
+    // what WhatsApp queued during a disconnect once it reconnects, so a message written during opening
+    // hours (perhaps already answered from the phone) can arrive after closing. And a message written
+    // overnight but delivered after opening must not be told "we're closed". `timestamp` is unix
+    // seconds; a missing, zero, negative or unrepresentable one reads as NaN or <= 0 and falls back to now.
+    const now = new Date();
+    const sent = new Date((m.timestamp ?? 0) * 1000);
+    const sentAt = sent.getTime() > 0 ? sent : now;
+    if (!isAfterHours(sentAt, cfg.schedule, cfg.config.timezone)) return false;
+    if (!isAfterHours(now, cfg.schedule, cfg.config.timezone)) return false;
 
     const sessionId = hook.sessionId;
     const key = `${sessionId}:${m.chatId}`;

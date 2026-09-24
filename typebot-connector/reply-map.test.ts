@@ -49,6 +49,21 @@ test('a contact card or a poll prompts instead of answering the step', () => {
   assert.equal(poll.kind, 'fallback', 'a poll must not advance the flow');
 });
 
+// From host 0.23.5 a Baileys catalog order carries its note (else its title) as the body, so an order
+// noting a bare in-range digit would select a numbered choice.
+test('an order prompts instead of answering the step', () => {
+  const r = mapReply(choice, msg({ body: '2', type: 'order' }));
+  assert.equal(r.kind, 'fallback', 'an order must not advance the flow');
+});
+
+// From host 0.23.5 a Baileys product card carries its text (else the product title) as the body, so on a
+// multi-select step any in-range digit in a title would pick that item.
+test('a product card prompts instead of answering the step', () => {
+  const multi: Awaiting = { ...choice, multiple: true };
+  const r = mapReply(multi, msg({ body: 'Kopi Gayo 1 kg', type: 'product' }));
+  assert.equal(r.kind, 'fallback', 'a product card must not advance the flow');
+});
+
 test('a contact card at a file step keeps that step\'s own wording', () => {
   const file: Awaiting = { kind: 'file', blockId: 'b' };
   const r = mapReply(file, msg({ body: 'BEGIN:VCARD\nEND:VCARD', type: 'contact' }));

@@ -15,13 +15,13 @@
 | Field | Value |
 | ----- | ----- |
 | **Identifier** | `supabase-otp-hook` |
-| **Version** | 0.3.8 |
-| **Released** | 2026-09-20 |
+| **Version** | 0.3.9 |
+| **Released** | 2026-09-23 |
 | **Status** | beta |
 | **Author** | maplerichie |
 | **License** | MIT |
 | **Type** | `extension` |
-| **Requires OpenWA** | ≥ 0.8.16 (tested 0.23.4) |
+| **Requires OpenWA** | ≥ 0.8.16 (tested 0.23.6) |
 | **Keywords** | supabase, auth, otp, sms, whatsapp, verification, standard-webhooks, openwa |
 | **Repository** | [OpenWA-plugins/supabase-otp-hook](https://github.com/rmyndharis/OpenWA-plugins/tree/main/supabase-otp-hook) |
 <!-- END DETAILS -->
@@ -37,9 +37,10 @@
 - **Synchronous feedback** — the host verifies the signature (→ **401** on failure) and runs a
   `session-alive` preflight (→ **503** on a dead WhatsApp session) before accepting, returning
   **204** on success. Supabase learns immediately whether the OTP could be handed
-  off; a dead session no longer gets swallowed as a silent 202. The ack carries no body, which is the
-  only shape Supabase accepts: Auth refuses a 200 or 202 whose content type does not parse to
-  `application/json`, and hosts from 0.20.0 on force `text/plain` on every ingress response.
+  off; a dead session no longer gets swallowed as a silent 202. The ack carries no body and no content
+  type, the one shape Supabase accepts from every supported host: Auth refuses a 200 or 202 whose
+  content type does not parse to `application/json`, OpenWA 0.20.0 through 0.23.5 force `text/plain`
+  on every ingress response, and 0.23.6 honors a declared `application/json` again.
 - **Fail-fast WhatsApp send** — a send that fails immediately (no live engine, the plugin not activated
   for the session, the concurrent-capability limit) fails the delivery, so the host retries it and
   dead-letters it for redrive instead of dropping the OTP, and
@@ -164,9 +165,12 @@ Session scope (which session sends) is also set at instance mint time, not in th
 
 - **OpenWA** ≥ 0.8.16 — Integration SDK v1 with the `standard-webhooks` ingress signature scheme and
   the `response`/preflight contract (`ctx.registerWebhook`, `webhook:ingress` permission).
-- **Body-keyed ingress dedup** (`dedupOn: "body"`) needs the first OpenWA release after 0.23.5. An
-  older host ignores the key and keys dedup on `webhook-id`, so a Supabase retry of one hook
-  invocation still sends a second code.
+- **Body-keyed ingress dedup** (`dedupOn: "body"`) takes effect from OpenWA 0.23.6. An older host
+  ignores the key and keys dedup on `webhook-id`, so a Supabase retry of one hook invocation still
+  sends a second code.
+- **Dead-session retry**: from OpenWA 0.23.6 the dead-session `503` carries `Retry-After: 5`, which
+  is what makes Supabase Auth retry it. An older host sends no `Retry-After`, so Auth fails the
+  sign-in on the first `503`.
 - **Supabase** — HTTP Send SMS hook with Standard Webhooks signing. SQL (Postgres function) hook variant not supported.
 - **WhatsApp** — may rate-limit or require an approved business template for business-initiated messages. Adjust `messageTemplate` to match your approved wording.
 

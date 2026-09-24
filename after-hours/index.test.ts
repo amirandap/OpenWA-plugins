@@ -342,3 +342,52 @@ test('a channel or broadcast post never draws an away reply', async () => {
   await fire('628123456789@c.us');
   assert.deepEqual(replies, ['628123456789@c.us']);
 });
+
+// From OpenWA 0.23.6 a Baileys session delivers the messages WhatsApp queued during a disconnect once
+// it reconnects, each carrying its original send time in `timestamp` (unix seconds). Fires one message
+// on a fresh plugin with the clock pinned to `nowMs` and returns how many away replies went out. Epoch
+// 0 is a Thursday, 00:00 UTC.
+const HOUR = 3_600;
+async function awayRepliesAt(config: Record<string, unknown>, nowMs: number, timestamp: unknown) {
+  let sent = 0;
+  let handler: ((hook: unknown) => Promise<{ continue: boolean }>) | undefined;
+  const ctx = makeCtx({
+    config,
+    registerHook: (_e, h) => { handler = h as (hook: unknown) => Promise<{ continue: boolean }>; },
+    reply: async () => { sent++; return { messageId: 'x', timestamp: 0 }; },
+  });
+  const { default: AfterHours } = await import('./index.ts');
+  await new AfterHours().onEnable(ctx as never);
+  mock.timers.enable({ apis: ['Date'], now: nowMs });
+  try {
+    await handler!({
+      source: 'Engine', sessionId: 's1', timestamp: new Date(),
+      data: { id: 'm1', chatId: 'c@x', body: 'halo', fromMe: false, isGroup: false, timestamp },
+    });
+  } finally {
+    mock.timers.reset();
+  }
+  return sent;
+}
+
+test('a message sent during opening hours but delivered after closing draws no away reply', async () => {
+  // Written at 10:00 (the shop may already have answered it from the phone), delivered at 18:00.
+  assert.equal(await awayRepliesAt(closedNowConfig, 18 * HOUR * 1000, 10 * HOUR), 0);
+});
+
+test('a message sent after hours but delivered during opening hours draws no away reply', async () => {
+  // Written at 08:00, delivered at 10:00: telling the customer "we're closed" would be false by then.
+  assert.equal(await awayRepliesAt(closedNowConfig, 10 * HOUR * 1000, 8 * HOUR), 0);
+});
+
+test('a message sent and delivered after hours draws the away reply', async () => {
+  assert.equal(await awayRepliesAt(closedNowConfig, 18 * HOUR * 1000, 8 * HOUR), 1);
+});
+
+test('a missing or non-positive send time falls back to now', async () => {
+  // Open only at the epoch hour itself, so reading a zero timestamp literally would land inside it.
+  const openAtEpoch = { ...closedNowConfig, schedule: JSON.stringify({ thu: '00:00-01:00' }) };
+  for (const timestamp of [undefined, 0, -1, NaN, null]) {
+    assert.equal(await awayRepliesAt(openAtEpoch, 2 * HOUR * 1000, timestamp), 1, `timestamp ${timestamp}`);
+  }
+});

@@ -6,6 +6,17 @@ All notable changes to the Typebot Connector plugin are documented here. The for
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-09-23
+
+### Fixed
+
+- A catalog order or product card now asks the contact to type instead of answering the current step,
+  since from OpenWA 0.23.5 its note or title fills the body on Baileys and could pick a numbered choice.
+
+### Changed
+
+- **Verified against OpenWA v0.23.6** (testedOpenWAVersion 0.23.4 -> 0.23.6).
+
 ## [0.2.8] - 2026-09-05
 
 ### Fixed
