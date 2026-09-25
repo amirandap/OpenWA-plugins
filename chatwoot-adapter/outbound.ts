@@ -7,7 +7,7 @@ import type {
 } from '../types/openwa';
 import type { MappingStore } from './mapping-store.ts';
 import type { KeyedAsyncLock } from './chat-lock.ts';
-import { shouldRelayOutbound, type ChatwootWebhookMessage } from './filters.ts';
+import { shouldRelayOutbound, candidatePhoneDigits, type ChatwootWebhookMessage } from './filters.ts';
 
 export interface OutboundDeps {
   lock: KeyedAsyncLock;
@@ -59,7 +59,22 @@ async function relay(deps: OutboundDeps, sessionId: string | undefined, evt: Cha
   // A media-only agent reply (voice note, image, …) has no `content`, so gate on either text or media —
   // the old text-only guard dropped every attachment silently (#607).
   if (!conversationId || (!text && media.length === 0)) return;
-  const target = await deps.store.getByConversation(conversationId, sessionId);
+  let target = await deps.store.getByConversation(conversationId, sessionId);
+  if (!target && sessionId) {
+    // No chat-mapping yet: this conversation was never relayed by inbound, i.e. an operator started it
+    // from Chatwoot directly rather than replying to a WhatsApp message. Try to mint one on the fly.
+    // Serialized per conversation (not per chat — there is no chatId to lock on until this resolves) so
+    // two near-simultaneous first replies to the same new conversation can't both mint a mapping and
+    // duplicate the checkNumberExists round-trip. Double-checked: the OUTER read above ran before either
+    // caller took the lock, so the second one through must re-read INSIDE it — otherwise it still acts on
+    // the stale "no mapping" result it already captured and derives (and checkNumberExists-calls) a
+    // second time regardless of what the lock serialized it behind.
+    const sid = sessionId;
+    target = await deps.lock.run(`${sid}:conv-derive:${conversationId}`, async () => {
+      const recheck = await deps.store.getByConversation(conversationId, sid);
+      return recheck ?? deriveNewMapping(deps, sid, conversationId, evt);
+    });
+  }
   if (!target) {
     deps.log(`no WA mapping for conversation ${conversationId}`);
     return;
@@ -150,6 +165,56 @@ async function relay(deps: OutboundDeps, sessionId: string | undefined, evt: Cha
     }
     });
   });
+}
+
+// Mint a chat-mapping for a Chatwoot-originated conversation that has none, so an operator can start a
+// WhatsApp thread from Chatwoot instead of only ever replying to one. Mirrors ensureConversation
+// (relay.ts) in the opposite direction: that resolves a Chatwoot conversation for a known WA chat, this
+// resolves a WA chat for a known Chatwoot conversation. Returns null (never throws) for anything it
+// can't confidently resolve — the caller's existing "no WA mapping" log and skip is exactly the right
+// fallback, not a special case.
+async function deriveNewMapping(
+  deps: OutboundDeps,
+  sessionId: string,
+  conversationId: number,
+  evt: ChatwootWebhookMessage,
+): Promise<{ sessionId: string; chatId: string } | null> {
+  const sender = evt.conversation?.meta?.sender;
+  const sourceId = evt.conversation?.contact_inbox?.source_id;
+  // Both are needed to write a ChatLink at all (mapping-store.ts), so there is nothing to attempt
+  // without them — and no point spending a real WhatsApp lookup first.
+  if (sender?.id === undefined || !sourceId) return null;
+  const digits = candidatePhoneDigits(sender);
+  if (!digits) return null;
+  let check: { exists: boolean; whatsappId: string | null };
+  try {
+    check = (await deps.engine.checkNumberExists(sessionId, digits)) as { exists: boolean; whatsappId: string | null };
+  } catch (err) {
+    // The session being offline (409) or WhatsApp not answering the lookup (503) isn't this
+    // conversation's fault, and isn't worth throwing over — a throw here would retry-storm every
+    // message on a conversation that can't resolve while the session is down. Same skip-don't-crash
+    // posture as the pre-existing "no WA mapping" branch this augments.
+    deps.log(`chatwoot-adapter: number check failed for conversation ${conversationId}`, err);
+    return null;
+  }
+  if (!check.exists || !check.whatsappId) {
+    // Never send to a number that isn't a real WhatsApp account — the send would just fail engine-side,
+    // and for a number this adapter is now hearing about for the first time (not, say, a stale mapping)
+    // there's no "may have changed since" nuance to log around.
+    deps.log(`chatwoot-adapter: conversation ${conversationId}'s contact has no WhatsApp account (checked ${digits})`);
+    return null;
+  }
+  const chatId = check.whatsappId;
+  await deps.store.link(sessionId, chatId, sessionId, {
+    conversationId,
+    contactId: sender.id,
+    sourceId,
+    // No prior WA history exists for a conversation Chatwoot originated — nothing to import, and
+    // `false` (ensureConversation's value) would instead schedule a pointless backfill attempt the next
+    // time this chat sees an inbound message.
+    backfillDone: true,
+  });
+  return { sessionId, chatId };
 }
 
 // EVERY attachment with a downloadable URL, in order. One WhatsApp message carries one media, so an

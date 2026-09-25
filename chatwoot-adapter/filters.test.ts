@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { shouldRelayInbound, shouldRelayOutbound, shouldRelayOwn } from './filters.ts';
+import { shouldRelayInbound, shouldRelayOutbound, shouldRelayOwn, candidatePhoneDigits } from './filters.ts';
 
 const base = {
   id: 'm1',
@@ -60,4 +60,28 @@ test('channel and broadcast chats are never relayed, in either direction', () =>
     assert.equal(shouldRelayInbound({ ...base, chatId }, 'Engine', true), true, `inbound ${chatId}`);
     assert.equal(shouldRelayOwn({ ...base, chatId, fromMe: true }, 'Engine', true), true, `own ${chatId}`);
   }
+});
+
+test('candidatePhoneDigits: prefers a JID-shaped identifier over phone_number', () => {
+  assert.equal(
+    candidatePhoneDigits({ identifier: '18492076733@c.us', phone_number: '+15550001111' }),
+    '18492076733',
+  );
+  assert.equal(candidatePhoneDigits({ identifier: '99887766@lid' }), '99887766');
+});
+
+test('candidatePhoneDigits: falls back to phone_number when identifier is absent or not WA-shaped', () => {
+  // A contact created outside this adapter (Chatwoot's own UI, a CSV import) has no identifier at all.
+  assert.equal(candidatePhoneDigits({ phone_number: '+1 (849) 207-6733' }), '18492076733');
+  // An identifier that happens to be set but isn't this adapter's JID shape (e.g. an email-derived id
+  // from a different channel type) must not be treated as a phone number.
+  assert.equal(candidatePhoneDigits({ identifier: 'not-a-jid', phone_number: '+18492076733' }), '18492076733');
+});
+
+test('candidatePhoneDigits: undefined when nothing usable is present', () => {
+  assert.equal(candidatePhoneDigits(undefined), undefined);
+  assert.equal(candidatePhoneDigits({}), undefined);
+  assert.equal(candidatePhoneDigits({ identifier: 'not-a-jid' }), undefined);
+  assert.equal(candidatePhoneDigits({ phone_number: '123' }), undefined); // too short to be E.164
+  assert.equal(candidatePhoneDigits({ phone_number: '+0123456789' }), undefined); // leading 0 — invalid E.164
 });

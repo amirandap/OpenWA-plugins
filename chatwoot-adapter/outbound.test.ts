@@ -324,6 +324,162 @@ test('every attachment of a multi-attachment agent reply reaches WhatsApp', asyn
   ]);
 });
 
+test('operator-started conversation: mints a mapping from the webhook contact and delivers to WhatsApp', async () => {
+  const store = new MappingStore(fakeStorage(), fakeMappings);
+  const checks: Array<[string, string]> = [];
+  const sent: Array<{ sessionId?: string; chatId?: string; text?: string }> = [];
+  const d = {
+    lock: new KeyedAsyncLock(),
+    conversations: { send: async (e: { sessionId?: string; chatId?: string; text?: string }) => { sent.push(e); return { messageId: 'WA1' }; } },
+    handover: { set: async () => {} },
+    engine: {
+      canonicalChatId: async (_s: string, c: string) => c,
+      checkNumberExists: async (sessionId: string, phone: string) => {
+        checks.push([sessionId, phone]);
+        return { number: phone, exists: true, whatsappId: `${phone}@c.us` };
+      },
+    },
+    store,
+    inboxId: 7,
+    log: () => {},
+  } as unknown as OutboundDeps;
+  const evt = {
+    event: 'message_created', message_type: 'outgoing', private: false, id: 100, content: 'hola, te contacto por acá',
+    inbox: { id: 7 },
+    conversation: {
+      id: 999,
+      meta: { sender: { id: 42, identifier: '18492076733@c.us', phone_number: '+18492076733' } },
+      contact_inbox: { source_id: 'src-999' },
+    },
+  };
+  const r = await handleOutbound(d, reqScoped('sess', evt));
+  assert.deepEqual(r, { status: 200 });
+  assert.deepEqual(checks, [['sess', '18492076733']]);
+  assert.deepEqual(sent, [{ sessionId: 'sess', chatId: '18492076733@c.us', type: 'text', text: 'hola, te contacto por acá' }]);
+  // The mapping is now durable: a later reply in the SAME conversation must not re-check the number.
+  assert.deepEqual(await store.getByConversation(999, 'sess'), { sessionId: 'sess', chatId: '18492076733@c.us' });
+});
+
+test('operator-started conversation: falls back to phone_number when the contact has no identifier', async () => {
+  const store = new MappingStore(fakeStorage(), fakeMappings);
+  const sent: Array<{ chatId?: string }> = [];
+  const d = {
+    lock: new KeyedAsyncLock(),
+    conversations: { send: async (e: { chatId?: string }) => { sent.push(e); return { messageId: 'WA1' }; } },
+    handover: { set: async () => {} },
+    engine: {
+      canonicalChatId: async (_s: string, c: string) => c,
+      checkNumberExists: async (_s: string, phone: string) => ({ number: phone, exists: true, whatsappId: `${phone}@c.us` }),
+    },
+    store,
+    inboxId: 7,
+    log: () => {},
+  } as unknown as OutboundDeps;
+  const evt = {
+    event: 'message_created', message_type: 'outgoing', private: false, id: 101, content: 'hola',
+    inbox: { id: 7 },
+    // No `identifier`: this contact was created by Chatwoot's own "new conversation" UI, not this adapter.
+    conversation: { id: 998, meta: { sender: { id: 43, phone_number: '+1 (849) 207-6733' } }, contact_inbox: { source_id: 'src-998' } },
+  };
+  await handleOutbound(d, reqScoped('sess', evt));
+  assert.deepEqual(sent, [{ sessionId: 'sess', chatId: '18492076733@c.us', type: 'text', text: 'hola' }]);
+});
+
+test('operator-started conversation: a number that is not on WhatsApp is never sent to, and no mapping is left behind', async () => {
+  const store = new MappingStore(fakeStorage(), fakeMappings);
+  const sent: unknown[] = [];
+  const d = {
+    lock: new KeyedAsyncLock(),
+    conversations: { send: async (e: unknown) => { sent.push(e); return { messageId: 'WA1' }; } },
+    handover: { set: async () => {} },
+    engine: {
+      canonicalChatId: async (_s: string, c: string) => c,
+      checkNumberExists: async (_s: string, phone: string) => ({ number: phone, exists: false, whatsappId: null }),
+    },
+    store,
+    inboxId: 7,
+    log: () => {},
+  } as unknown as OutboundDeps;
+  const evt = {
+    event: 'message_created', message_type: 'outgoing', private: false, id: 102, content: 'hola',
+    inbox: { id: 7 },
+    conversation: { id: 997, meta: { sender: { id: 44, identifier: '15550009999@c.us' } }, contact_inbox: { source_id: 'src-997' } },
+  };
+  const r = await handleOutbound(d, reqScoped('sess', evt));
+  assert.deepEqual(r, { status: 200 }); // resolves — never retried, matching the pre-existing "no mapping" posture
+  assert.equal(sent.length, 0);
+  assert.equal(await store.getByConversation(997, 'sess'), null);
+});
+
+test('operator-started conversation: no sender metadata at all behaves exactly like the pre-existing "no WA mapping" case', async () => {
+  const { deps: d, sent } = deps({ store: { getByConversation: async () => null } });
+  await handleOutbound(
+    d,
+    req({ event: 'message_created', message_type: 'outgoing', private: false, id: 103, content: 'hola', inbox: { id: 7 }, conversation: { id: 996 } }),
+  );
+  assert.equal(sent.length, 0);
+});
+
+test('operator-started conversation: a transient checkNumberExists failure does not crash the webhook', async () => {
+  const store = new MappingStore(fakeStorage(), fakeMappings);
+  const sent: unknown[] = [];
+  const d = {
+    lock: new KeyedAsyncLock(),
+    conversations: { send: async (e: unknown) => { sent.push(e); return { messageId: 'WA1' }; } },
+    handover: { set: async () => {} },
+    engine: {
+      canonicalChatId: async (_s: string, c: string) => c,
+      checkNumberExists: async () => { throw new Error('session offline'); },
+    },
+    store,
+    inboxId: 7,
+    log: () => {},
+  } as unknown as OutboundDeps;
+  const evt = {
+    event: 'message_created', message_type: 'outgoing', private: false, id: 104, content: 'hola',
+    inbox: { id: 7 },
+    conversation: { id: 995, meta: { sender: { id: 45, identifier: '15550001234@c.us' } }, contact_inbox: { source_id: 'src-995' } },
+  };
+  const r = await handleOutbound(d, reqScoped('sess', evt));
+  assert.deepEqual(r, { status: 200 });
+  assert.equal(sent.length, 0);
+});
+
+test('operator-started conversation: two near-simultaneous first replies mint the mapping exactly once', async () => {
+  const store = new MappingStore(fakeStorage(), fakeMappings);
+  const sent: Array<{ chatId?: string; text?: string }> = [];
+  let checkCalls = 0;
+  const d = {
+    lock: new KeyedAsyncLock(),
+    conversations: {
+      send: async (e: { chatId?: string; text?: string }) => {
+        sent.push(e);
+        return { messageId: `WA${sent.length}` };
+      },
+    },
+    handover: { set: async () => {} },
+    engine: {
+      canonicalChatId: async (_s: string, c: string) => c,
+      checkNumberExists: async (_s: string, phone: string) => {
+        checkCalls++;
+        await new Promise(r => setTimeout(r, 5)); // widen the race window
+        return { number: phone, exists: true, whatsappId: `${phone}@c.us` };
+      },
+    },
+    store,
+    inboxId: 7,
+    log: () => {},
+  } as unknown as OutboundDeps;
+  const conversation = { id: 994, meta: { sender: { id: 46, identifier: '15550005678@c.us' } }, contact_inbox: { source_id: 'src-994' } };
+  await Promise.all([
+    handleOutbound(d, reqScoped('sess', { event: 'message_created', message_type: 'outgoing', private: false, id: 200, content: 'first', inbox: { id: 7 }, conversation })),
+    handleOutbound(d, reqScoped('sess', { event: 'message_created', message_type: 'outgoing', private: false, id: 201, content: 'second', inbox: { id: 7 }, conversation })),
+  ]);
+  assert.equal(checkCalls, 1, 'the second reply must reuse the mapping the first one minted, not re-check the number');
+  assert.equal(sent.length, 2);
+  assert.ok(sent.every(s => s.chatId === '15550005678@c.us'));
+});
+
 test('a mid-reply send failure still leaves the attachments that landed echo-guarded', async () => {
   // The echo guard is claimed per send, not after the whole reply. Without that, a reply whose second
   // attachment fails would leave the first one sent but unguarded: the retry re-sends it (the

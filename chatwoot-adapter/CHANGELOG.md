@@ -6,6 +6,19 @@ All notable changes to the Chatwoot Adapter plugin are documented here. The form
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-25
+
+### Added
+
+- **Operator-started conversations.** An agent reply to a Chatwoot conversation this adapter never
+  relayed (started from Chatwoot's "New Conversation" compose, or created directly via the API) now
+  mints a chat-mapping on the fly instead of being silently dropped with "no WA mapping". The target
+  number is read from the conversation's contact (its adapter-written `identifier`, or `phone_number`
+  for a contact created some other way), confirmed as a real WhatsApp account via
+  `engine.checkNumberExists` before anything is sent, and the resulting mapping is reused by every later
+  reply in that conversation — no per-message re-check. A number that isn't on WhatsApp, or a contact
+  with nothing to derive from, still resolves exactly as before (logged, message dropped, no retry).
+
 ## [0.9.10] - 2026-09-24
 
 ### Added

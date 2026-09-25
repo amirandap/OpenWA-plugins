@@ -15,8 +15,8 @@
 | Field | Value |
 | ----- | ----- |
 | **Identifier** | `chatwoot-adapter` |
-| **Version** | 0.9.10 |
-| **Released** | 2026-09-24 |
+| **Version** | 0.10.0 |
+| **Released** | 2026-09-25 |
 | **Status** | stable |
 | **Author** | Yudhi Armyndharis |
 | **License** | MIT |
@@ -32,6 +32,9 @@
   `incoming` messages, with media uploaded as attachments.
 - **Chatwoot → WhatsApp** — agent replies (`outgoing`, non-private) sent back to WhatsApp. The adapter's own
   posts, foreign inboxes, and private notes are never relayed.
+- **Operator-started conversations** — a reply to a conversation this adapter never relayed (started from
+  Chatwoot's own compose UI, or via the API) is delivered too: the target number is read from the
+  contact and confirmed as a real WhatsApp account before anything is sent.
 - **Handover** — assigning a human agent in Chatwoot stops other OpenWA bots from auto-replying on that chat;
   automation resumes when the conversation is unassigned.
 - **JID-keyed contacts** — Chatwoot contacts are keyed on the WhatsApp JID, so matching is stable across
