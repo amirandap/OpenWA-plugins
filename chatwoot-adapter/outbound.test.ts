@@ -420,6 +420,35 @@ test('operator-started conversation: no sender metadata at all behaves exactly l
   assert.equal(sent.length, 0);
 });
 
+test('operator-started conversation: a group contact is out of scope — never sent to, engine.checkNumberExists never called', async () => {
+  const store = new MappingStore(fakeStorage(), fakeMappings);
+  const sent: unknown[] = [];
+  let checked = false;
+  const d = {
+    lock: new KeyedAsyncLock(),
+    conversations: { send: async (e: unknown) => { sent.push(e); return { messageId: 'WA1' }; } },
+    handover: { set: async () => {} },
+    engine: {
+      canonicalChatId: async (_s: string, c: string) => c,
+      checkNumberExists: async () => { checked = true; return { exists: true, whatsappId: 'x@c.us' }; },
+    },
+    store,
+    inboxId: 7,
+    log: () => {},
+  } as unknown as OutboundDeps;
+  const evt = {
+    event: 'message_created', message_type: 'outgoing', private: false, id: 105, content: 'hola a todos',
+    inbox: { id: 7 },
+    // A group contact this adapter never mapped: no phone_number (resolvePhone never assigns one to a
+    // group), identifier is the group JID.
+    conversation: { id: 993, meta: { sender: { id: 47, identifier: '120363403926419672@g.us' } }, contact_inbox: { source_id: 'src-993' } },
+  };
+  const r = await handleOutbound(d, reqScoped('sess', evt));
+  assert.deepEqual(r, { status: 200 });
+  assert.equal(sent.length, 0);
+  assert.equal(checked, false, 'a group id is not a phone number; it must never reach checkNumberExists');
+});
+
 test('operator-started conversation: a transient checkNumberExists failure does not crash the webhook', async () => {
   const store = new MappingStore(fakeStorage(), fakeMappings);
   const sent: unknown[] = [];

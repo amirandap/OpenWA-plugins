@@ -84,20 +84,22 @@ export interface ChatwootWebhookMessage {
   changed_attributes?: Array<Record<string, { current_value?: unknown; previous_value?: unknown }>>;
 }
 
-// WA chat id shape this adapter and the engine both use: digits, then a domain WhatsApp assigns.
-// `@lid` is included even though a fresh operator-initiated contact will never carry one (no inbound
-// message has happened yet to mint it) — matching the domains the adapter already accepts elsewhere
-// keeps this one regex the single definition, rather than a second list that can drift from it.
-const WA_ID_RE = /^\d+@(?:c\.us|lid|g\.us)$/;
+// WA 1:1 chat id shape this adapter and the engine both use: digits, then a domain WhatsApp assigns to
+// an individual account. Deliberately excludes `@g.us`: a group identifier's "digits" aren't an MSISDN,
+// so engine.checkNumberExists (a phone-account lookup) cannot verify it and would just report
+// exists:false — silently discarding what may be a perfectly valid group id. There is no verification
+// this function's caller can substitute for a group, so a group-identified contact is out of scope for
+// it entirely, not a case worth half-handling.
+const WA_ID_RE = /^\d+@(?:c\.us|lid)$/;
 
 // Best-effort WA phone digits for a Chatwoot contact whose chat isn't mapped yet — an operator-started
 // conversation, which this adapter never created. Prefers the JID-shaped `identifier` this adapter
-// itself writes on every contact it creates (so a contact IT made, re-attached to a fresh conversation
-// by an operator, round-trips through the exact id it was keyed on); falls back to the contact's E.164
-// `phone_number` for a contact created some other way (Chatwoot's own "new conversation" UI, a CSV
-// import, another integration). Pure and synchronous: it only PROPOSES a candidate. `engine
-// .checkNumberExists` is the source of truth for whether the number is real and what its canonical
-// chat id actually is, so a caller must still confirm before trusting this value.
+// itself writes on every 1:1 contact it creates (so a contact IT made, re-attached to a fresh
+// conversation by an operator, round-trips through the exact id it was keyed on); falls back to the
+// contact's E.164 `phone_number` for a contact created some other way (Chatwoot's own "new
+// conversation" UI, a CSV import, another integration). Pure and synchronous: it only PROPOSES a
+// candidate. `engine.checkNumberExists` is the source of truth for whether the number is real and what
+// its canonical chat id actually is, so a caller must still confirm before trusting this value.
 export function candidatePhoneDigits(sender: ChatwootContactMeta | undefined): string | undefined {
   if (!sender) return undefined;
   if (sender.identifier && WA_ID_RE.test(sender.identifier)) {

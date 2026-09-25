@@ -85,3 +85,17 @@ test('candidatePhoneDigits: undefined when nothing usable is present', () => {
   assert.equal(candidatePhoneDigits({ phone_number: '123' }), undefined); // too short to be E.164
   assert.equal(candidatePhoneDigits({ phone_number: '+0123456789' }), undefined); // leading 0 — invalid E.164
 });
+
+test('candidatePhoneDigits: a group identifier is out of scope, never treated as a phone number', () => {
+  // A group contact's "digits" aren't an MSISDN — engine.checkNumberExists (a phone-account lookup)
+  // cannot verify them, so this must not hand one out as a candidate. resolvePhone (relay.ts) never
+  // gives a group contact a phone_number either, so there is no fallback to fall back to.
+  assert.equal(candidatePhoneDigits({ identifier: '120363403926419672@g.us' }), undefined);
+  assert.equal(
+    candidatePhoneDigits({ identifier: '120363403926419672@g.us', phone_number: '+18492076733' }),
+    // Falls through to phone_number when the identifier isn't a 1:1 shape — same as any other
+    // non-matching identifier. A group contact realistically never carries a phone_number, but if one
+    // were present (e.g. hand-edited in Chatwoot) it is a real E.164 value and still usable.
+    '18492076733',
+  );
+});
