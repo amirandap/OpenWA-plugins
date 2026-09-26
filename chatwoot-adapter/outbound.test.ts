@@ -56,7 +56,7 @@ function deps(over: { store?: Record<string, unknown>; rejectReplyTo?: string } 
       ...over.store,
     },
     inboxId: 7,
-    numberCheckRetryDelayMs: 1,
+    numberCheckBaseRetryDelayMs: 1,
     log: () => {},
   } as unknown as OutboundDeps;
   return { sent, handovers, deps: d };
@@ -400,7 +400,7 @@ test('operator-started conversation: a number that is not on WhatsApp on EITHER 
     },
     store,
     inboxId: 7,
-    numberCheckRetryDelayMs: 1, // real timer, negligible — no need to mock it for a 1ms wait
+    numberCheckBaseRetryDelayMs: 1, // real timer, negligible — no need to mock it for a 1ms wait
     log: () => {},
   } as unknown as OutboundDeps;
   const evt = {
@@ -410,7 +410,7 @@ test('operator-started conversation: a number that is not on WhatsApp on EITHER 
   };
   const r = await handleOutbound(d, reqScoped('sess', evt));
   assert.deepEqual(r, { status: 200 }); // resolves — never retried at the webhook level, matching "no mapping"
-  assert.equal(calls, 2, 'a consistent negative is checked twice (the one retry), not endlessly');
+  assert.equal(calls, 3, 'a consistent negative is checked three times (two retries), not endlessly');
   assert.equal(sent.length, 0);
   assert.equal(await store.getByConversation(997, 'sess'), null);
 });
@@ -435,7 +435,7 @@ test('operator-started conversation: a false on the first check but true on retr
     },
     store,
     inboxId: 7,
-    numberCheckRetryDelayMs: 1,
+    numberCheckBaseRetryDelayMs: 1,
     log: () => {},
   } as unknown as OutboundDeps;
   const evt = {
@@ -500,7 +500,7 @@ test('operator-started conversation: a checkNumberExists failure on both attempt
     },
     store,
     inboxId: 7,
-    numberCheckRetryDelayMs: 1,
+    numberCheckBaseRetryDelayMs: 1,
     log: () => {},
   } as unknown as OutboundDeps;
   const evt = {
@@ -510,7 +510,7 @@ test('operator-started conversation: a checkNumberExists failure on both attempt
   };
   const r = await handleOutbound(d, reqScoped('sess', evt));
   assert.deepEqual(r, { status: 200 });
-  assert.equal(calls, 2, 'retried once before giving up');
+  assert.equal(calls, 3, 'retried twice before giving up');
   assert.equal(sent.length, 0);
 });
 
@@ -532,7 +532,7 @@ test('operator-started conversation: a transient checkNumberExists failure on th
     },
     store,
     inboxId: 7,
-    numberCheckRetryDelayMs: 1,
+    numberCheckBaseRetryDelayMs: 1,
     log: () => {},
   } as unknown as OutboundDeps;
   const evt = {

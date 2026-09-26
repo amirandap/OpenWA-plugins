@@ -5,7 +5,7 @@ import { KeyedAsyncLock } from './chat-lock.ts';
 import { handleInbound, relayInbound, MAX_BACKFILL_ATTEMPTS } from './inbound.ts';
 import { handleSent } from './sent.ts';
 import { backfillAllChats } from './backfill.ts';
-import { handleOutbound, NUMBER_CHECK_RETRY_DELAY_MS } from './outbound.ts';
+import { handleOutbound, NUMBER_CHECK_BASE_RETRY_DELAY_MS } from './outbound.ts';
 import { drainRetries, RETRY_INTERVAL_MS, MAX_RETRY_ATTEMPTS, MAX_PENDING_RETRIES } from './retry.ts';
 
 // Observer band. Must run before any responder: a responder returning {continue:false} ends the chain,
@@ -188,7 +188,7 @@ export default class ChatwootAdapter implements IPlugin {
           engine: ctx.engine,
           store,
           inboxId: readConfig(ctx.config).inboxId,
-          numberCheckRetryDelayMs: NUMBER_CHECK_RETRY_DELAY_MS,
+          numberCheckBaseRetryDelayMs: NUMBER_CHECK_BASE_RETRY_DELAY_MS,
           log: (m, e) => ctx.logger.error(m, e),
         },
         req,

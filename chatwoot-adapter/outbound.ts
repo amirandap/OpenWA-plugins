@@ -18,10 +18,11 @@ export interface OutboundDeps {
   engine: PluginEngineReadCapability;
   store: MappingStore;
   inboxId: number;
-  // Delay before the one retry in checkNumberExistsWithRetry (below). A deps field rather than the
-  // module constant it defaults from in production (index.ts) so a test can pass ~0 and run the retry
-  // path on real timers instead of needing to fast-forward mocked ones through several microtask hops.
-  numberCheckRetryDelayMs: number;
+  // Base delay for checkNumberExistsWithRetry's growing backoff (below): attempt N waits base*N ms. A
+  // deps field rather than the module constant it defaults from in production (index.ts) so a test can
+  // pass ~1 and run the retry path on real timers instead of needing to fast-forward mocked ones through
+  // several microtask hops.
+  numberCheckBaseRetryDelayMs: number;
   log: (m: string, e?: unknown) => void;
 }
 
@@ -171,14 +172,17 @@ async function relay(deps: OutboundDeps, sessionId: string | undefined, evt: Cha
   });
 }
 
-// One retry, after a short delay, before trusting a negative from engine.checkNumberExists. Observed
-// live against Baileys: `onWhatsApp` occasionally answers with an empty result — a real reply, not a
-// timeout (which the host surfaces as a thrown EngineTransportError, handled separately below) — for a
-// number that resolves fine moments later. A single retry absorbs that without slowing down the common
-// case (a real hit returns on the first attempt), and never masks a genuine negative for long: nothing
-// here caches a `false`, so the very next reply in the same conversation checks again from scratch.
-export const NUMBER_CHECK_RETRIES = 1;
-export const NUMBER_CHECK_RETRY_DELAY_MS = 1500;
+// Up to two retries (three attempts total), with linearly increasing delay, before trusting a negative
+// from engine.checkNumberExists. Observed live against Baileys: `onWhatsApp` occasionally answers with
+// an empty result — a real reply, not a timeout (which the host surfaces as a thrown
+// EngineTransportError, handled separately below) — for a number that resolves fine moments later, and
+// in practice that flaky window outlasted a single fixed-delay retry at least once. Growing the delay
+// (base, then 2x base) buys more time without a fixed long wait on every attempt. This only adds latency
+// to the FIRST message of a brand-new conversation — every later reply reuses the mapping this mints and
+// never checks again — and never masks a genuine negative for long: nothing here caches a `false`, so
+// the very next reply in the same conversation checks again from scratch.
+export const NUMBER_CHECK_RETRIES = 2;
+export const NUMBER_CHECK_BASE_RETRY_DELAY_MS = 2000;
 
 async function checkNumberExistsWithRetry(
   deps: OutboundDeps,
@@ -186,7 +190,7 @@ async function checkNumberExistsWithRetry(
   digits: string,
 ): Promise<{ exists: boolean; whatsappId: string | null }> {
   for (let attempt = 0; ; attempt++) {
-    if (attempt > 0) await new Promise(resolve => setTimeout(resolve, deps.numberCheckRetryDelayMs));
+    if (attempt > 0) await new Promise(resolve => setTimeout(resolve, deps.numberCheckBaseRetryDelayMs * attempt));
     const lastAttempt = attempt === NUMBER_CHECK_RETRIES;
     try {
       const check = (await deps.engine.checkNumberExists(sessionId, digits)) as { exists: boolean; whatsappId: string | null };
