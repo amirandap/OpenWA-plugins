@@ -19,13 +19,24 @@ All notable changes to the Chatwoot Adapter plugin are documented here. The form
   reply in that conversation — no per-message re-check. A number that isn't on WhatsApp, or a contact
   with nothing to derive from, still resolves exactly as before (logged, message dropped, no retry). A
   group contact is out of scope — its identifier isn't a phone number `checkNumberExists` can verify —
-  and behaves exactly as before this change (dropped, never sent). One short (300ms) retry absorbs a
-  quick false negative from `engine.checkNumberExists` (observed live against Baileys: `onWhatsApp`
-  occasionally answers with an empty result — a real reply, not a timeout — for a number that resolves
-  fine moments later) before the number is treated as not on WhatsApp. Kept deliberately short: the host
-  gives an ingress webhook only 5s total (`INGRESS_DISPATCH_TIMEOUT_MS`), and a wider backoff tried during
+  and behaves exactly as before this change (dropped, never sent).
+
+### Fixed (found during the same development pass, before this ever shipped)
+
+- **`engine.checkNumberExists` (the plugin capability) is a plain `Promise<boolean>`, not
+  `{exists, whatsappId}`** — that richer shape belongs to the REST API's
+  `ContactController.checkNumberExists`, a different endpoint the plugin never calls; `getNumberId` (the
+  host method that actually resolves a canonical JID) is not exposed to plugins at all. An early version
+  of this feature read the capability's return value AS IF it had `.exists`/`.whatsappId`, which on a raw
+  boolean is always `undefined` — so it treated every live number as not on WhatsApp, 100% of the time,
+  every real number checked live against it in development failed. The chat id is now built directly
+  (`<digits>@c.us`, the neutral dialect the host itself normalizes both engines to) once
+  `checkNumberExists` confirms the digits are real.
+- One retry, after a short (300ms) delay, absorbs the small window where a fresh `checkNumberExists`
+  call can still race the engine's own contact-resolution. Kept deliberately short: the host gives an
+  ingress webhook only 5s total (`INGRESS_DISPATCH_TIMEOUT_MS`), and a wider backoff tried during
   development (2s + 4s) blew through that budget and 504'd the whole delivery instead of helping — a
-  same-request retry can only ever absorb a sub-second blip, not a longer flaky window.
+  same-request retry can only ever absorb a sub-second blip, not a longer outage.
 
 ## [0.9.10] - 2026-09-24
 

@@ -172,35 +172,34 @@ async function relay(deps: OutboundDeps, sessionId: string | undefined, evt: Cha
   });
 }
 
-// One retry, after a short delay, before trusting a negative from engine.checkNumberExists. Observed
-// live against Baileys: `onWhatsApp` occasionally answers with an empty result — a real reply, not a
-// timeout (which the host surfaces as a thrown EngineTransportError, handled separately below) — for a
-// number that resolves fine moments later.
+// engine.checkNumberExists (PluginEngineReadCapability, plugin.interfaces.ts) is a plain
+// Promise<boolean> — the SAME name as the REST API's ContactController.checkNumberExists, but that one
+// returns {number, exists, whatsappId}. They are NOT the same shape; the plugin capability strips the
+// canonical id, and getNumberId (the host method that has it) is never exposed to plugins at all. There
+// is no live check that returns a JID to a plugin — construct the neutral dialect ourselves once
+// checkNumberExists confirms the digits are real: `<digits>@c.us`, exactly what the host's own
+// normalization produces for a hit on either engine (baileys-messaging.ts's toNeutralJid comment).
 //
-// The delay is kept SHORT on purpose: the host gives an ingress webhook dispatch a hard
-// INGRESS_DISPATCH_TIMEOUT_MS budget of 5s total (plugin-sandbox-bridge.ts) for this whole handler, not
-// just this retry — a single 1.5s delay plus two real onWhatsApp round-trips already brushed that
-// ceiling once, and a 2s+4s growing backoff blew straight through it (observed live: "Inline ingress
-// dispatch failed ... status 504", the delivery then legitimately failing since the host had already
-// given up on it). A flaky window that outlasts what fits inside 5s cannot be absorbed by a same-request
-// retry at all — that needs the durable, out-of-band retry queue this module doesn't have (inbound.ts's
-// does, for a different failure kind) — so this stays a best-effort blip-absorber, not a fix for a
-// longer outage. It never masks a genuine negative for long either way: nothing here caches a `false`,
-// so the very next reply in the same conversation checks again from scratch.
+// One retry, after a short delay, before trusting a `false`. Kept SHORT on purpose: the host gives an
+// ingress webhook dispatch a hard INGRESS_DISPATCH_TIMEOUT_MS budget of 5s total
+// (plugin-sandbox-bridge.ts) for this whole handler, not just this retry — a wider backoff tried during
+// development (2s + 4s) blew straight through that ceiling and 504'd the delivery (observed live:
+// "Inline ingress dispatch failed ... status 504") instead of helping. A flaky window that outlasts what
+// fits inside 5s cannot be absorbed by a same-request retry at all — that needs the durable, out-of-band
+// retry queue this module doesn't have (inbound.ts's does, for a different failure kind) — so this stays
+// a best-effort blip-absorber, not a fix for a longer outage. It never masks a genuine negative for long
+// either way: nothing here caches a `false`, so the very next reply in the same conversation checks
+// again from scratch.
 export const NUMBER_CHECK_RETRIES = 1;
 export const NUMBER_CHECK_BASE_RETRY_DELAY_MS = 300;
 
-async function checkNumberExistsWithRetry(
-  deps: OutboundDeps,
-  sessionId: string,
-  digits: string,
-): Promise<{ exists: boolean; whatsappId: string | null }> {
+async function checkNumberExistsWithRetry(deps: OutboundDeps, sessionId: string, digits: string): Promise<boolean> {
   for (let attempt = 0; ; attempt++) {
     if (attempt > 0) await new Promise(resolve => setTimeout(resolve, deps.numberCheckBaseRetryDelayMs * attempt));
     const lastAttempt = attempt === NUMBER_CHECK_RETRIES;
     try {
-      const check = (await deps.engine.checkNumberExists(sessionId, digits)) as { exists: boolean; whatsappId: string | null };
-      if ((check.exists && check.whatsappId) || lastAttempt) return check;
+      const exists = await deps.engine.checkNumberExists(sessionId, digits);
+      if (exists || lastAttempt) return exists as boolean;
     } catch (err) {
       if (lastAttempt) throw err;
     }
@@ -226,9 +225,9 @@ async function deriveNewMapping(
   if (sender?.id === undefined || !sourceId) return null;
   const digits = candidatePhoneDigits(sender);
   if (!digits) return null;
-  let check: { exists: boolean; whatsappId: string | null };
+  let exists: boolean;
   try {
-    check = await checkNumberExistsWithRetry(deps, sessionId, digits);
+    exists = await checkNumberExistsWithRetry(deps, sessionId, digits);
   } catch (err) {
     // The session being offline (409) or WhatsApp not answering either lookup (503) isn't this
     // conversation's fault, and isn't worth throwing over — a throw here would retry-storm every
@@ -237,14 +236,14 @@ async function deriveNewMapping(
     deps.log(`chatwoot-adapter: number check failed for conversation ${conversationId}`, err);
     return null;
   }
-  if (!check.exists || !check.whatsappId) {
+  if (!exists) {
     // Never send to a number that isn't a real WhatsApp account — the send would just fail engine-side,
     // and for a number this adapter is now hearing about for the first time (not, say, a stale mapping)
     // there's no "may have changed since" nuance to log around.
     deps.log(`chatwoot-adapter: conversation ${conversationId}'s contact has no WhatsApp account (checked ${digits})`);
     return null;
   }
-  const chatId = check.whatsappId;
+  const chatId = `${digits}@c.us`; // neutral dialect — see the checkNumberExists comment above
   await deps.store.link(sessionId, chatId, sessionId, {
     conversationId,
     contactId: sender.id,

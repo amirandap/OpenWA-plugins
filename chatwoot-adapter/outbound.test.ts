@@ -337,7 +337,7 @@ test('operator-started conversation: mints a mapping from the webhook contact an
       canonicalChatId: async (_s: string, c: string) => c,
       checkNumberExists: async (sessionId: string, phone: string) => {
         checks.push([sessionId, phone]);
-        return { number: phone, exists: true, whatsappId: `${phone}@c.us` };
+        return true;
       },
     },
     store,
@@ -370,7 +370,7 @@ test('operator-started conversation: falls back to phone_number when the contact
     handover: { set: async () => {} },
     engine: {
       canonicalChatId: async (_s: string, c: string) => c,
-      checkNumberExists: async (_s: string, phone: string) => ({ number: phone, exists: true, whatsappId: `${phone}@c.us` }),
+      checkNumberExists: async () => true,
     },
     store,
     inboxId: 7,
@@ -396,7 +396,7 @@ test('operator-started conversation: a number that is not on WhatsApp on EITHER 
     handover: { set: async () => {} },
     engine: {
       canonicalChatId: async (_s: string, c: string) => c,
-      checkNumberExists: async (_s: string, phone: string) => { calls++; return { number: phone, exists: false, whatsappId: null }; },
+      checkNumberExists: async () => { calls++; return false; },
     },
     store,
     inboxId: 7,
@@ -428,10 +428,7 @@ test('operator-started conversation: a false on the first check but true on retr
     handover: { set: async () => {} },
     engine: {
       canonicalChatId: async (_s: string, c: string) => c,
-      checkNumberExists: async (_s: string, phone: string) => {
-        calls++;
-        return calls === 1 ? { number: phone, exists: false, whatsappId: null } : { number: phone, exists: true, whatsappId: `${phone}@c.us` };
-      },
+      checkNumberExists: async () => { calls++; return calls !== 1; },
     },
     store,
     inboxId: 7,
@@ -467,7 +464,7 @@ test('operator-started conversation: a group contact is out of scope — never s
     handover: { set: async () => {} },
     engine: {
       canonicalChatId: async (_s: string, c: string) => c,
-      checkNumberExists: async () => { checked = true; return { exists: true, whatsappId: 'x@c.us' }; },
+      checkNumberExists: async () => { checked = true; return true; },
     },
     store,
     inboxId: 7,
@@ -524,10 +521,10 @@ test('operator-started conversation: a transient checkNumberExists failure on th
     handover: { set: async () => {} },
     engine: {
       canonicalChatId: async (_s: string, c: string) => c,
-      checkNumberExists: async (_s: string, phone: string) => {
+      checkNumberExists: async () => {
         calls++;
         if (calls === 1) throw new Error('WhatsApp did not answer the number-check query');
-        return { number: phone, exists: true, whatsappId: `${phone}@c.us` };
+        return true;
       },
     },
     store,
@@ -559,10 +556,10 @@ test('operator-started conversation: two near-simultaneous first replies mint th
     handover: { set: async () => {} },
     engine: {
       canonicalChatId: async (_s: string, c: string) => c,
-      checkNumberExists: async (_s: string, phone: string) => {
+      checkNumberExists: async () => {
         checkCalls++;
         await new Promise(r => setTimeout(r, 5)); // widen the race window
-        return { number: phone, exists: true, whatsappId: `${phone}@c.us` };
+        return true;
       },
     },
     store,
