@@ -172,17 +172,23 @@ async function relay(deps: OutboundDeps, sessionId: string | undefined, evt: Cha
   });
 }
 
-// Up to two retries (three attempts total), with linearly increasing delay, before trusting a negative
-// from engine.checkNumberExists. Observed live against Baileys: `onWhatsApp` occasionally answers with
-// an empty result — a real reply, not a timeout (which the host surfaces as a thrown
-// EngineTransportError, handled separately below) — for a number that resolves fine moments later, and
-// in practice that flaky window outlasted a single fixed-delay retry at least once. Growing the delay
-// (base, then 2x base) buys more time without a fixed long wait on every attempt. This only adds latency
-// to the FIRST message of a brand-new conversation — every later reply reuses the mapping this mints and
-// never checks again — and never masks a genuine negative for long: nothing here caches a `false`, so
-// the very next reply in the same conversation checks again from scratch.
-export const NUMBER_CHECK_RETRIES = 2;
-export const NUMBER_CHECK_BASE_RETRY_DELAY_MS = 2000;
+// One retry, after a short delay, before trusting a negative from engine.checkNumberExists. Observed
+// live against Baileys: `onWhatsApp` occasionally answers with an empty result — a real reply, not a
+// timeout (which the host surfaces as a thrown EngineTransportError, handled separately below) — for a
+// number that resolves fine moments later.
+//
+// The delay is kept SHORT on purpose: the host gives an ingress webhook dispatch a hard
+// INGRESS_DISPATCH_TIMEOUT_MS budget of 5s total (plugin-sandbox-bridge.ts) for this whole handler, not
+// just this retry — a single 1.5s delay plus two real onWhatsApp round-trips already brushed that
+// ceiling once, and a 2s+4s growing backoff blew straight through it (observed live: "Inline ingress
+// dispatch failed ... status 504", the delivery then legitimately failing since the host had already
+// given up on it). A flaky window that outlasts what fits inside 5s cannot be absorbed by a same-request
+// retry at all — that needs the durable, out-of-band retry queue this module doesn't have (inbound.ts's
+// does, for a different failure kind) — so this stays a best-effort blip-absorber, not a fix for a
+// longer outage. It never masks a genuine negative for long either way: nothing here caches a `false`,
+// so the very next reply in the same conversation checks again from scratch.
+export const NUMBER_CHECK_RETRIES = 1;
+export const NUMBER_CHECK_BASE_RETRY_DELAY_MS = 300;
 
 async function checkNumberExistsWithRetry(
   deps: OutboundDeps,

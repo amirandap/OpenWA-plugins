@@ -19,11 +19,13 @@ All notable changes to the Chatwoot Adapter plugin are documented here. The form
   reply in that conversation — no per-message re-check. A number that isn't on WhatsApp, or a contact
   with nothing to derive from, still resolves exactly as before (logged, message dropped, no retry). A
   group contact is out of scope — its identifier isn't a phone number `checkNumberExists` can verify —
-  and behaves exactly as before this change (dropped, never sent). Up to two retries, with growing
-  delay, absorb a false negative from `engine.checkNumberExists` (observed live against Baileys:
-  `onWhatsApp` occasionally answers with an empty result — a real reply, not a timeout — for a number
-  that resolves fine moments later; a single fixed-delay retry was not always enough) before the number
-  is treated as not on WhatsApp.
+  and behaves exactly as before this change (dropped, never sent). One short (300ms) retry absorbs a
+  quick false negative from `engine.checkNumberExists` (observed live against Baileys: `onWhatsApp`
+  occasionally answers with an empty result — a real reply, not a timeout — for a number that resolves
+  fine moments later) before the number is treated as not on WhatsApp. Kept deliberately short: the host
+  gives an ingress webhook only 5s total (`INGRESS_DISPATCH_TIMEOUT_MS`), and a wider backoff tried during
+  development (2s + 4s) blew through that budget and 504'd the whole delivery instead of helping — a
+  same-request retry can only ever absorb a sub-second blip, not a longer flaky window.
 
 ## [0.9.10] - 2026-09-24
 
