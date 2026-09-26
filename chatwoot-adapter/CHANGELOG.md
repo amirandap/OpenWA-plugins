@@ -19,7 +19,10 @@ All notable changes to the Chatwoot Adapter plugin are documented here. The form
   reply in that conversation — no per-message re-check. A number that isn't on WhatsApp, or a contact
   with nothing to derive from, still resolves exactly as before (logged, message dropped, no retry). A
   group contact is out of scope — its identifier isn't a phone number `checkNumberExists` can verify —
-  and behaves exactly as before this change (dropped, never sent).
+  and behaves exactly as before this change (dropped, never sent). One short retry absorbs a false
+  negative from `engine.checkNumberExists` (observed live against Baileys: `onWhatsApp` occasionally
+  answers with an empty result — a real reply, not a timeout — for a number that resolves fine moments
+  later) before the number is treated as not on WhatsApp.
 
 ## [0.9.10] - 2026-09-24
 

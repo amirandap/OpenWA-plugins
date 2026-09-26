@@ -595,7 +595,7 @@
     "repoPath": "chatwoot-adapter",
     "repoUrl": "https://github.com/rmyndharis/OpenWA-plugins",
     "homepage": "https://github.com/rmyndharis/OpenWA-plugins/tree/main/chatwoot-adapter",
-    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/chatwoot-adapter-v0.10.0/chatwoot-adapter.zip#sha256=9d3b1982b7ef389f1cee69ccdfbfa907a871f1eb543a0c825aefafbc746a44d1",
+    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/chatwoot-adapter-v0.10.0/chatwoot-adapter.zip#sha256=96f0efa09c39045f2882aa48df194ce34da06f744e7574632e2bbb7221f95b7b",
     "permissions": [
       "net:fetch",
       "conversation:send",

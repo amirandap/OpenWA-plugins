@@ -56,6 +56,7 @@ function deps(over: { store?: Record<string, unknown>; rejectReplyTo?: string } 
       ...over.store,
     },
     inboxId: 7,
+    numberCheckRetryDelayMs: 1,
     log: () => {},
   } as unknown as OutboundDeps;
   return { sent, handovers, deps: d };
@@ -385,19 +386,21 @@ test('operator-started conversation: falls back to phone_number when the contact
   assert.deepEqual(sent, [{ sessionId: 'sess', chatId: '18492076733@c.us', type: 'text', text: 'hola' }]);
 });
 
-test('operator-started conversation: a number that is not on WhatsApp is never sent to, and no mapping is left behind', async () => {
+test('operator-started conversation: a number that is not on WhatsApp on EITHER attempt is never sent to, and no mapping is left behind', async () => {
   const store = new MappingStore(fakeStorage(), fakeMappings);
   const sent: unknown[] = [];
+  let calls = 0;
   const d = {
     lock: new KeyedAsyncLock(),
     conversations: { send: async (e: unknown) => { sent.push(e); return { messageId: 'WA1' }; } },
     handover: { set: async () => {} },
     engine: {
       canonicalChatId: async (_s: string, c: string) => c,
-      checkNumberExists: async (_s: string, phone: string) => ({ number: phone, exists: false, whatsappId: null }),
+      checkNumberExists: async (_s: string, phone: string) => { calls++; return { number: phone, exists: false, whatsappId: null }; },
     },
     store,
     inboxId: 7,
+    numberCheckRetryDelayMs: 1, // real timer, negligible — no need to mock it for a 1ms wait
     log: () => {},
   } as unknown as OutboundDeps;
   const evt = {
@@ -406,9 +409,43 @@ test('operator-started conversation: a number that is not on WhatsApp is never s
     conversation: { id: 997, meta: { sender: { id: 44, identifier: '15550009999@c.us' } }, contact_inbox: { source_id: 'src-997' } },
   };
   const r = await handleOutbound(d, reqScoped('sess', evt));
-  assert.deepEqual(r, { status: 200 }); // resolves — never retried, matching the pre-existing "no mapping" posture
+  assert.deepEqual(r, { status: 200 }); // resolves — never retried at the webhook level, matching "no mapping"
+  assert.equal(calls, 2, 'a consistent negative is checked twice (the one retry), not endlessly');
   assert.equal(sent.length, 0);
   assert.equal(await store.getByConversation(997, 'sess'), null);
+});
+
+test('operator-started conversation: a false on the first check but true on retry still delivers (Baileys onWhatsApp flakiness)', async () => {
+  // Observed live: engine.checkNumberExists answered exists:false for a number with real WhatsApp
+  // history, then exists:true moments later for the identical query — not a timeout (the host
+  // distinguishes that as a thrown error, covered by the test below), a genuinely empty first answer.
+  const store = new MappingStore(fakeStorage(), fakeMappings);
+  const sent: Array<{ chatId?: string }> = [];
+  let calls = 0;
+  const d = {
+    lock: new KeyedAsyncLock(),
+    conversations: { send: async (e: { chatId?: string }) => { sent.push(e); return { messageId: 'WA1' }; } },
+    handover: { set: async () => {} },
+    engine: {
+      canonicalChatId: async (_s: string, c: string) => c,
+      checkNumberExists: async (_s: string, phone: string) => {
+        calls++;
+        return calls === 1 ? { number: phone, exists: false, whatsappId: null } : { number: phone, exists: true, whatsappId: `${phone}@c.us` };
+      },
+    },
+    store,
+    inboxId: 7,
+    numberCheckRetryDelayMs: 1,
+    log: () => {},
+  } as unknown as OutboundDeps;
+  const evt = {
+    event: 'message_created', message_type: 'outgoing', private: false, id: 106, content: 'hola',
+    inbox: { id: 7 },
+    conversation: { id: 992, meta: { sender: { id: 48, identifier: '18492076733@c.us' } }, contact_inbox: { source_id: 'src-992' } },
+  };
+  await handleOutbound(d, reqScoped('sess', evt));
+  assert.equal(calls, 2);
+  assert.deepEqual(sent, [{ sessionId: 'sess', chatId: '18492076733@c.us', type: 'text', text: 'hola' }]);
 });
 
 test('operator-started conversation: no sender metadata at all behaves exactly like the pre-existing "no WA mapping" case', async () => {
@@ -449,19 +486,21 @@ test('operator-started conversation: a group contact is out of scope — never s
   assert.equal(checked, false, 'a group id is not a phone number; it must never reach checkNumberExists');
 });
 
-test('operator-started conversation: a transient checkNumberExists failure does not crash the webhook', async () => {
+test('operator-started conversation: a checkNumberExists failure on both attempts does not crash the webhook', async () => {
   const store = new MappingStore(fakeStorage(), fakeMappings);
   const sent: unknown[] = [];
+  let calls = 0;
   const d = {
     lock: new KeyedAsyncLock(),
     conversations: { send: async (e: unknown) => { sent.push(e); return { messageId: 'WA1' }; } },
     handover: { set: async () => {} },
     engine: {
       canonicalChatId: async (_s: string, c: string) => c,
-      checkNumberExists: async () => { throw new Error('session offline'); },
+      checkNumberExists: async () => { calls++; throw new Error('session offline'); },
     },
     store,
     inboxId: 7,
+    numberCheckRetryDelayMs: 1,
     log: () => {},
   } as unknown as OutboundDeps;
   const evt = {
@@ -471,7 +510,38 @@ test('operator-started conversation: a transient checkNumberExists failure does 
   };
   const r = await handleOutbound(d, reqScoped('sess', evt));
   assert.deepEqual(r, { status: 200 });
+  assert.equal(calls, 2, 'retried once before giving up');
   assert.equal(sent.length, 0);
+});
+
+test('operator-started conversation: a transient checkNumberExists failure on the first attempt still delivers on retry', async () => {
+  const store = new MappingStore(fakeStorage(), fakeMappings);
+  const sent: Array<{ chatId?: string }> = [];
+  let calls = 0;
+  const d = {
+    lock: new KeyedAsyncLock(),
+    conversations: { send: async (e: { chatId?: string }) => { sent.push(e); return { messageId: 'WA1' }; } },
+    handover: { set: async () => {} },
+    engine: {
+      canonicalChatId: async (_s: string, c: string) => c,
+      checkNumberExists: async (_s: string, phone: string) => {
+        calls++;
+        if (calls === 1) throw new Error('WhatsApp did not answer the number-check query');
+        return { number: phone, exists: true, whatsappId: `${phone}@c.us` };
+      },
+    },
+    store,
+    inboxId: 7,
+    numberCheckRetryDelayMs: 1,
+    log: () => {},
+  } as unknown as OutboundDeps;
+  const evt = {
+    event: 'message_created', message_type: 'outgoing', private: false, id: 107, content: 'hola',
+    inbox: { id: 7 },
+    conversation: { id: 991, meta: { sender: { id: 49, identifier: '15550002222@c.us' } }, contact_inbox: { source_id: 'src-991' } },
+  };
+  await handleOutbound(d, reqScoped('sess', evt));
+  assert.deepEqual(sent, [{ sessionId: 'sess', chatId: '15550002222@c.us', type: 'text', text: 'hola' }]);
 });
 
 test('operator-started conversation: two near-simultaneous first replies mint the mapping exactly once', async () => {

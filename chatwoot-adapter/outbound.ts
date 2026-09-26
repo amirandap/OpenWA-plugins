@@ -18,6 +18,10 @@ export interface OutboundDeps {
   engine: PluginEngineReadCapability;
   store: MappingStore;
   inboxId: number;
+  // Delay before the one retry in checkNumberExistsWithRetry (below). A deps field rather than the
+  // module constant it defaults from in production (index.ts) so a test can pass ~0 and run the retry
+  // path on real timers instead of needing to fast-forward mocked ones through several microtask hops.
+  numberCheckRetryDelayMs: number;
   log: (m: string, e?: unknown) => void;
 }
 
@@ -167,6 +171,32 @@ async function relay(deps: OutboundDeps, sessionId: string | undefined, evt: Cha
   });
 }
 
+// One retry, after a short delay, before trusting a negative from engine.checkNumberExists. Observed
+// live against Baileys: `onWhatsApp` occasionally answers with an empty result — a real reply, not a
+// timeout (which the host surfaces as a thrown EngineTransportError, handled separately below) — for a
+// number that resolves fine moments later. A single retry absorbs that without slowing down the common
+// case (a real hit returns on the first attempt), and never masks a genuine negative for long: nothing
+// here caches a `false`, so the very next reply in the same conversation checks again from scratch.
+export const NUMBER_CHECK_RETRIES = 1;
+export const NUMBER_CHECK_RETRY_DELAY_MS = 1500;
+
+async function checkNumberExistsWithRetry(
+  deps: OutboundDeps,
+  sessionId: string,
+  digits: string,
+): Promise<{ exists: boolean; whatsappId: string | null }> {
+  for (let attempt = 0; ; attempt++) {
+    if (attempt > 0) await new Promise(resolve => setTimeout(resolve, deps.numberCheckRetryDelayMs));
+    const lastAttempt = attempt === NUMBER_CHECK_RETRIES;
+    try {
+      const check = (await deps.engine.checkNumberExists(sessionId, digits)) as { exists: boolean; whatsappId: string | null };
+      if ((check.exists && check.whatsappId) || lastAttempt) return check;
+    } catch (err) {
+      if (lastAttempt) throw err;
+    }
+  }
+}
+
 // Mint a chat-mapping for a Chatwoot-originated conversation that has none, so an operator can start a
 // WhatsApp thread from Chatwoot instead of only ever replying to one. Mirrors ensureConversation
 // (relay.ts) in the opposite direction: that resolves a Chatwoot conversation for a known WA chat, this
@@ -188,9 +218,9 @@ async function deriveNewMapping(
   if (!digits) return null;
   let check: { exists: boolean; whatsappId: string | null };
   try {
-    check = (await deps.engine.checkNumberExists(sessionId, digits)) as { exists: boolean; whatsappId: string | null };
+    check = await checkNumberExistsWithRetry(deps, sessionId, digits);
   } catch (err) {
-    // The session being offline (409) or WhatsApp not answering the lookup (503) isn't this
+    // The session being offline (409) or WhatsApp not answering either lookup (503) isn't this
     // conversation's fault, and isn't worth throwing over — a throw here would retry-storm every
     // message on a conversation that can't resolve while the session is down. Same skip-don't-crash
     // posture as the pre-existing "no WA mapping" branch this augments.
